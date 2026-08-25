@@ -7,6 +7,7 @@ import org.springframework.data.domain.Sort;
 public record AuthorFiltersDTO(
         @Min(0) Integer page,
         @Min(1) @Max(100) Integer size,
+        String name,
         String search,
         String nationality,
         AuthorSortBy sortBy,

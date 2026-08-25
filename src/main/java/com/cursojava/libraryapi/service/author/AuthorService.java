@@ -65,11 +65,20 @@ public class AuthorService {
             specification = specification.and(searchBy(filters.search()));
         }
 
+        if(filters.name() != null && !filters.name().isBlank()) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.like(
+                            criteriaBuilder.lower(root.get("name")),
+                            "%" + filters.name().toLowerCase(Locale.ROOT) + "%"
+                    )
+            );
+        }
+
         if (filters.nationality() != null && !filters.nationality().isBlank()) {
             specification = specification.and((root, query, criteriaBuilder) ->
-                    criteriaBuilder.equal(
+                    criteriaBuilder.like(
                             criteriaBuilder.lower(root.get("nationality")),
-                            filters.nationality().toLowerCase(Locale.ROOT)
+                            "%" + filters.nationality().toLowerCase(Locale.ROOT) + "%"
                     )
             );
         }
