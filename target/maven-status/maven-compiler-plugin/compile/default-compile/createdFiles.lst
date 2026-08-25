@@ -1,0 +1,7 @@
+com/cursojava/libraryapi/config/DatabaseConfiguration.class
+com/cursojava/libraryapi/dto/global/PageResponseDTO.class
+com/cursojava/libraryapi/config/AuditingConfiguration.class
+com/cursojava/libraryapi/dto/author/AuthorFilterDTO.class
+com/cursojava/libraryapi/exception/author/AuthorAlreadyExistsException.class
+com/cursojava/libraryapi/dto/author/AuthorSortBy.class
+com/cursojava/libraryapi/LibraryapiApplication.class
