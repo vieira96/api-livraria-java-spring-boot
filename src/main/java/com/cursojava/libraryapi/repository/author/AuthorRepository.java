@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 public interface AuthorRepository extends JpaRepository<AuthorModel, UUID>, JpaSpecificationExecutor<AuthorModel> {
-    boolean existsByNameAndBirthdate(String name, LocalDate birthdate);
+    boolean existsByNameAndBirthdateAndNationality(String name, LocalDate birthdate, String nationality);
 
-    boolean existsByNameAndBirthdateAndIdNot(String name, LocalDate birthdate, UUID id);
+    boolean existsByNameAndBirthdateAndNationalityAndIdNot(String name, LocalDate birthdate, String nationality, UUID id);
 }

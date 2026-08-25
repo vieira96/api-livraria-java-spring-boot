@@ -6,6 +6,7 @@ import com.cursojava.libraryapi.exception.NotFoundException;
 import com.cursojava.libraryapi.exception.author.AuthorAlreadyExistsException;
 import com.cursojava.libraryapi.model.author.AuthorModel;
 import com.cursojava.libraryapi.repository.author.AuthorRepository;
+import com.cursojava.libraryapi.validator.author.AuthorValidator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -28,11 +29,14 @@ public class AuthorService {
     );
 
     private final AuthorRepository authorRepository;
+    private final AuthorValidator authorValidator;
 
     @Transactional
     public AuthorModel createAuthor(CreateAuthorDTO request) {
-        validateAuthorDoesNotExist(request.name(), request.birthdate(), null);
-
+        authorValidator.validateAuthor(
+                request,
+                null
+        );
         AuthorModel authorModel = new AuthorModel();
         authorModel.setName(request.name());
         authorModel.setBirthdate(request.birthdate());
@@ -40,22 +44,24 @@ public class AuthorService {
         return authorRepository.save(authorModel);
     }
 
+    public AuthorModel getAuthorById(UUID id) {
+        return authorValidator.authorExists(id);
+    }
+
     @Transactional
     public AuthorModel updateAuthor(UUID id, CreateAuthorDTO request) {
-        AuthorModel authorModel = this.getAuthorById(id);
+        AuthorModel authorModel = this.authorValidator.authorExists(id);
 
-        validateAuthorDoesNotExist(request.name(), request.birthdate(), id);
+        authorValidator.validateAuthor(
+                request,
+                id
+        );
 
         authorModel.setName(request.name());
         authorModel.setBirthdate(request.birthdate());
         authorModel.setNationality(request.nationality());
 
         return authorRepository.save(authorModel);
-    }
-
-    public AuthorModel getAuthorById(UUID id) {
-        return authorRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Autor não encontrado."));
     }
 
     public Page<AuthorModel> getAuthors(AuthorFiltersDTO filters) {
@@ -94,18 +100,8 @@ public class AuthorService {
 
     @Transactional
     public void deleteAuthor(UUID id) {
-        AuthorModel authorModel = this.getAuthorById(id);
+        AuthorModel authorModel = this.authorValidator.authorExists(id);
         authorRepository.delete(authorModel);
-    }
-
-    private void validateAuthorDoesNotExist(String name, LocalDate birthdate, UUID currentAuthorId) {
-        boolean authorAlreadyExists = currentAuthorId == null
-                ? authorRepository.existsByNameAndBirthdate(name, birthdate)
-                : authorRepository.existsByNameAndBirthdateAndIdNot(name, birthdate, currentAuthorId);
-
-        if (authorAlreadyExists) {
-            throw new AuthorAlreadyExistsException();
-        }
     }
 
     private Specification<AuthorModel> searchBy(String search) {
