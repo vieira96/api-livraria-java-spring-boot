@@ -16,11 +16,17 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class AuthorService {
+    private static final Set<String> SEARCHABLE_FIELDS = Set.of(
+            "name",
+            "nationality"
+    );
+
     private final AuthorRepository authorRepository;
 
     @Transactional
@@ -56,12 +62,7 @@ public class AuthorService {
         Specification<AuthorModel> specification = Specification.unrestricted();
 
         if (filters.search() != null && !filters.search().isBlank()) {
-            specification = specification.and((root, query, criteriaBuilder) ->
-                    criteriaBuilder.like(
-                            criteriaBuilder.lower(root.get("name")),
-                            "%" + filters.search().toLowerCase(Locale.ROOT) + "%"
-                    )
-            );
+            specification = specification.and(searchBy(filters.search()));
         }
 
         if (filters.nationality() != null && !filters.nationality().isBlank()) {
@@ -96,5 +97,20 @@ public class AuthorService {
         if (authorAlreadyExists) {
             throw new AuthorAlreadyExistsException();
         }
+    }
+
+    private Specification<AuthorModel> searchBy(String search) {
+        return (root, query, criteriaBuilder) -> {
+            String term = "%" + search.toLowerCase(Locale.ROOT) + "%";
+
+            return criteriaBuilder.or(
+                    SEARCHABLE_FIELDS.stream()
+                            .map(field -> criteriaBuilder.like(
+                                    criteriaBuilder.lower(root.get(field)),
+                                    term
+                            ))
+                            .toArray(jakarta.persistence.criteria.Predicate[]::new)
+            );
+        };
     }
 }

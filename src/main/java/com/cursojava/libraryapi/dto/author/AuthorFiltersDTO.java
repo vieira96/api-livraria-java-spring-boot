@@ -13,7 +13,7 @@ public record AuthorFiltersDTO(
         Sort.Direction direction
 ) {
     public int pageOrDefault() {
-        return page == null ? 0 : page;
+        return page == null ? 0 : page - 1;
     }
 
     public int sizeOrDefault() {
