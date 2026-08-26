@@ -101,6 +101,7 @@ public class AuthorService {
     @Transactional
     public void deleteAuthor(UUID id) {
         AuthorModel authorModel = this.authorValidator.authorExists(id);
+        authorValidator.validateDeleteAuthor(authorModel.getId());
         authorRepository.delete(authorModel);
     }
 

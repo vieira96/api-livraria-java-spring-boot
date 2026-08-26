@@ -1,26 +1,52 @@
 package com.cursojava.libraryapi.repository.book;
 
+import com.cursojava.libraryapi.model.author.AuthorModel;
+import com.cursojava.libraryapi.model.book.BookGender;
 import com.cursojava.libraryapi.model.book.BookModel;
+import com.cursojava.libraryapi.repository.author.AuthorRepository;
+import com.cursojava.libraryapi.validator.author.AuthorValidator;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Locale;
+import java.util.Optional;
+import java.util.UUID;
 
-
-@DataJpaTest
-@AutoConfigureTestDatabase(
-        replace = AutoConfigureTestDatabase.Replace.NONE
-)
+@SpringBootTest
 public class BookRepositoryTest {
 
     @Autowired
     BookRepository bookRepository;
+
+    @Autowired
+    AuthorRepository authorRepository;
+
+    @Autowired
+    AuthorValidator authorValidator;
+
+    @Test
+    public void saveTest() {
+        UUID authorId = UUID.fromString("5a5c90df-d629-45a2-b0ce-5aff66cd3c9e");
+        AuthorModel author = authorValidator.authorExists(authorId);
+
+        BookModel book = new BookModel();
+        book.setIsbn(UUID.randomUUID().toString().replace("-", "").substring(0, 20));
+        book.setTitle("Livro de teste");
+        book.setPublishDate(LocalDate.now());
+        book.setGender(BookGender.FICCAO);
+        book.setPrice(new BigDecimal("49.90"));
+        book.setAuthor(author);
+
+        BookModel bookSaved = bookRepository.saveAndFlush(book);
+
+        System.out.println("Livro persistido: " + bookSaved);
+    }
 
     @Test
     public void findAll() {

@@ -1,42 +1,52 @@
 package com.cursojava.libraryapi.repository.author;
 
+import com.cursojava.libraryapi.config.AuditingConfiguration;
 import com.cursojava.libraryapi.model.author.AuthorModel;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.context.annotation.Import;
 
 import java.time.LocalDate;
-import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
-@AutoConfigureTestDatabase(
-        replace = AutoConfigureTestDatabase.Replace.NONE
-)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import(AuditingConfiguration.class)
 public class AuthorRepositoryTest {
 
     @Autowired
     AuthorRepository authorRepository;
 
     @Test
-    public void salvarTest() {
+    public void shouldSaveAuthor() {
         AuthorModel author = new AuthorModel();
         author.setName("J.K. Rowling");
         author.setBirthdate(LocalDate.of(1965, 7, 31));
         author.setNationality("British");
 
-        AuthorModel authorSaved = authorRepository.save(author);
+        AuthorModel authorSaved = authorRepository.saveAndFlush(author);
 
-        System.out.println("Author saved: " + authorSaved);
+        assertThat(authorSaved.getId()).isNotNull();
+        assertThat(authorSaved.getCreatedAt()).isNotNull();
+        assertThat(authorSaved.getUpdatedAt()).isNotNull();
+        assertThat(authorRepository.findById(authorSaved.getId())).isPresent();
     }
 
     @Test
-    public void updateTest() {
-        UUID id = UUID.fromString("c98e548a-d992-41d4-9cef-1365445e366f");
-        AuthorModel author = authorRepository.findById(id).orElseThrow(() -> new RuntimeException("Author not found"));
-        author.setName("J.K. Rowling Updated");
-        AuthorModel authorUpdated = authorRepository.save(author);
+    public void shouldUpdateAuthor() {
+        AuthorModel author = new AuthorModel();
+        author.setName("J.K. Rowling");
+        author.setBirthdate(LocalDate.of(1965, 7, 31));
+        author.setNationality("British");
+        AuthorModel authorSaved = authorRepository.saveAndFlush(author);
 
-        System.out.println("Author atualizado: " + authorUpdated);
+        authorSaved.setName("J.K. Rowling Updated");
+        AuthorModel authorUpdated = authorRepository.saveAndFlush(authorSaved);
+
+        assertThat(authorUpdated.getName()).isEqualTo("J.K. Rowling Updated");
+        assertThat(authorUpdated.getUpdatedAt()).isNotNull();
     }
 }

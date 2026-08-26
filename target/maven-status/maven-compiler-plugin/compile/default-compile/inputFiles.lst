@@ -12,6 +12,7 @@
 /home/vieira/Documentos/Pessoal/CursoJava/libraryapi/src/main/java/com/cursojava/libraryapi/dto/global/PageResponseDTO.java
 /home/vieira/Documentos/Pessoal/CursoJava/libraryapi/src/main/java/com/cursojava/libraryapi/exception/NotFoundException.java
 /home/vieira/Documentos/Pessoal/CursoJava/libraryapi/src/main/java/com/cursojava/libraryapi/exception/author/AuthorAlreadyExistsException.java
+/home/vieira/Documentos/Pessoal/CursoJava/libraryapi/src/main/java/com/cursojava/libraryapi/exception/author/AuthorHasBooksException.java
 /home/vieira/Documentos/Pessoal/CursoJava/libraryapi/src/main/java/com/cursojava/libraryapi/mapper/author/AuthorMapper.java
 /home/vieira/Documentos/Pessoal/CursoJava/libraryapi/src/main/java/com/cursojava/libraryapi/mapper/book/BookMapper.java
 /home/vieira/Documentos/Pessoal/CursoJava/libraryapi/src/main/java/com/cursojava/libraryapi/model/author/AuthorModel.java
@@ -22,3 +23,4 @@
 /home/vieira/Documentos/Pessoal/CursoJava/libraryapi/src/main/java/com/cursojava/libraryapi/repository/book/BookRepository.java
 /home/vieira/Documentos/Pessoal/CursoJava/libraryapi/src/main/java/com/cursojava/libraryapi/service/author/AuthorService.java
 /home/vieira/Documentos/Pessoal/CursoJava/libraryapi/src/main/java/com/cursojava/libraryapi/service/book/BookService.java
+/home/vieira/Documentos/Pessoal/CursoJava/libraryapi/src/main/java/com/cursojava/libraryapi/validator/author/AuthorValidator.java
