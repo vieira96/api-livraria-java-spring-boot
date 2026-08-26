@@ -1,2 +1,21 @@
 # Credenciais e configurações exclusivas da máquina local.
 .env
+.env.*
+!.env.example
+
+# Maven
+target/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+out/
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# Sistema operacional e logs locais
+.DS_Store
+*.log
