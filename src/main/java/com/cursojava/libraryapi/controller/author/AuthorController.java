@@ -23,7 +23,7 @@ public class AuthorController {
     private final AuthorService authorService;
 
     @PostMapping
-    public ResponseEntity<AuthorResponseDTO> createAuthor(@RequestBody CreateAuthorDTO request) {
+    public ResponseEntity<AuthorResponseDTO> createAuthor(@Valid @RequestBody CreateAuthorDTO request) {
         AuthorModel author = authorService.createAuthor(request);
 
         return ResponseEntity

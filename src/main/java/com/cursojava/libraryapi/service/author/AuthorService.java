@@ -2,8 +2,6 @@ package com.cursojava.libraryapi.service.author;
 
 import com.cursojava.libraryapi.dto.author.CreateAuthorDTO;
 import com.cursojava.libraryapi.dto.author.AuthorFiltersDTO;
-import com.cursojava.libraryapi.exception.NotFoundException;
-import com.cursojava.libraryapi.exception.author.AuthorAlreadyExistsException;
 import com.cursojava.libraryapi.model.author.AuthorModel;
 import com.cursojava.libraryapi.repository.author.AuthorRepository;
 import com.cursojava.libraryapi.validator.author.AuthorValidator;
@@ -15,7 +13,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;

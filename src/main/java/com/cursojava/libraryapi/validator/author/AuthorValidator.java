@@ -1,7 +1,7 @@
 package com.cursojava.libraryapi.validator.author;
 
 import com.cursojava.libraryapi.dto.author.CreateAuthorDTO;
-import com.cursojava.libraryapi.exception.NotFoundException;
+import com.cursojava.libraryapi.exception.global.NotFoundException;
 import com.cursojava.libraryapi.exception.author.AuthorAlreadyExistsException;
 import com.cursojava.libraryapi.exception.author.AuthorHasBooksException;
 import com.cursojava.libraryapi.model.author.AuthorModel;
