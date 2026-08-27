@@ -3,13 +3,17 @@ package com.cursojava.libraryapi.exception.global;
 import com.cursojava.libraryapi.dto.error.ErrorResponseDTO;
 import com.cursojava.libraryapi.dto.error.FieldErrorDTO;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import tools.jackson.databind.exc.InvalidFormatException;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestControllerAdvice
@@ -55,6 +59,41 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponseDTO.conflict(e.getMessage()));
     }
 
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponseDTO> handleHttpMessageNotReadableException(
+            HttpMessageNotReadableException e
+    ) {
+        Throwable cause = e.getCause();
+
+        if (cause instanceof InvalidFormatException invalidFormatException) {
+            String field = invalidFormatException.getPath().isEmpty()
+                    ? "body"
+                    : invalidFormatException.getPath().getLast().getPropertyName();
+
+            String error = LocalDate.class.equals(invalidFormatException.getTargetType())
+                    ? "Data inválida. Use o formato yyyy-MM-dd."
+                    : "Valor inválido.";
+
+            ErrorResponseDTO response = new ErrorResponseDTO(
+                    HttpStatus.BAD_REQUEST.value(),
+                    "Corpo da requisição inválido.",
+                    List.of(new FieldErrorDTO(field, error))
+            );
+
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        ErrorResponseDTO response = new ErrorResponseDTO(
+                HttpStatus.BAD_REQUEST.value(),
+                "Corpo da requisição inválido.",
+                List.of()
+        );
+
+        return ResponseEntity
+                .badRequest()
+                .body(response);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDTO> handleInternalServerError(Exception e) {
         log.error("Erro interno não tratado", e);
@@ -68,5 +107,22 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .internalServerError()
                 .body(response);
+    }
+
+    private static @NonNull ErrorResponseDTO getResponse(InvalidFormatException invalidFormatException) {
+        String field = invalidFormatException.getPath().isEmpty()
+                ? "body"
+                : invalidFormatException.getPath().getLast().getPropertyName();
+
+        String error = LocalDate.class.equals(invalidFormatException.getTargetType())
+                ? "Data inválida. Use o formato yyyy-MM-dd."
+                : "Valor inválido.";
+
+        ErrorResponseDTO response = new ErrorResponseDTO(
+                HttpStatus.BAD_REQUEST.value(),
+                "Corpo da requisição inválido.",
+                List.of(new FieldErrorDTO(field, error))
+        );
+        return response;
     }
 }
