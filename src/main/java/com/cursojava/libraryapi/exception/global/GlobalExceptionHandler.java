@@ -2,8 +2,7 @@ package com.cursojava.libraryapi.exception.global;
 
 import com.cursojava.libraryapi.dto.error.ErrorResponseDTO;
 import com.cursojava.libraryapi.dto.error.FieldErrorDTO;
-import com.cursojava.libraryapi.exception.author.AuthorAlreadyExistsException;
-import com.cursojava.libraryapi.exception.author.AuthorHasBooksException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -14,6 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.List;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -48,13 +48,25 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
-    @ExceptionHandler({
-            AuthorAlreadyExistsException.class,
-            AuthorHasBooksException.class
-    })
-    public ResponseEntity<ErrorResponseDTO> handleConflictExceptions(RuntimeException e) {
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponseDTO> handleConflictException(ConflictException e) {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
                 .body(ErrorResponseDTO.conflict(e.getMessage()));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponseDTO> handleInternalServerError(Exception e) {
+        log.error("Erro interno não tratado", e);
+
+        ErrorResponseDTO response = new ErrorResponseDTO(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Ocorreu um erro interno. Tente novamente mais tarde.",
+                List.of()
+        );
+
+        return ResponseEntity
+                .internalServerError()
+                .body(response);
     }
 }
