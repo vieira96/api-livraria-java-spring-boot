@@ -5,6 +5,7 @@ import com.cursojava.libraryapi.dto.book.CreateBookDTO;
 import com.cursojava.libraryapi.mapper.book.BookMapper;
 import com.cursojava.libraryapi.model.book.BookModel;
 import com.cursojava.libraryapi.service.book.BookService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,12 +16,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/books")
+@RequestMapping("/api/books")
 public class BookController {
     private final BookService bookService;
 
     @PostMapping
-    public ResponseEntity<BookResponseDTO> createBook(@RequestBody CreateBookDTO request) {
+    public ResponseEntity<BookResponseDTO> createBook(@Valid @RequestBody CreateBookDTO request) {
         BookModel bookModel = bookService.createBook(request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)

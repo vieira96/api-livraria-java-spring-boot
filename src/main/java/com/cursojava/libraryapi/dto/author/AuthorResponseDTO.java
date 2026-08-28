@@ -1,7 +1,9 @@
 package com.cursojava.libraryapi.dto.author;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record AuthorResponseDTO(
@@ -9,6 +11,8 @@ public record AuthorResponseDTO(
         String name,
         LocalDate birthdate,
         String nationality,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm", timezone = "America/Sao_Paulo")
+        Instant createdAt,
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm", timezone = "America/Sao_Paulo")
+        Instant updatedAt
 ) {}

@@ -52,7 +52,7 @@ public class AuthorController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AuthorResponseDTO> updateAuthor(@PathVariable String id, @RequestBody CreateAuthorDTO request) {
+    public ResponseEntity<AuthorResponseDTO> updateAuthor(@Valid @PathVariable String id, @RequestBody CreateAuthorDTO request) {
         UUID authorId = UUID.fromString(id);
         AuthorModel updatedAuthor = authorService.updateAuthor(authorId, request);
 

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import tools.jackson.databind.exc.InvalidFormatException;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 
 @RestControllerAdvice
@@ -66,21 +67,7 @@ public class GlobalExceptionHandler {
         Throwable cause = e.getCause();
 
         if (cause instanceof InvalidFormatException invalidFormatException) {
-            String field = invalidFormatException.getPath().isEmpty()
-                    ? "body"
-                    : invalidFormatException.getPath().getLast().getPropertyName();
-
-            String error = LocalDate.class.equals(invalidFormatException.getTargetType())
-                    ? "Data inválida. Use o formato yyyy-MM-dd."
-                    : "Valor inválido.";
-
-            ErrorResponseDTO response = new ErrorResponseDTO(
-                    HttpStatus.BAD_REQUEST.value(),
-                    "Corpo da requisição inválido.",
-                    List.of(new FieldErrorDTO(field, error))
-            );
-
-            return ResponseEntity.badRequest().body(response);
+            return ResponseEntity.badRequest().body(getResponse(invalidFormatException));
         }
 
         ErrorResponseDTO response = new ErrorResponseDTO(
@@ -114,9 +101,21 @@ public class GlobalExceptionHandler {
                 ? "body"
                 : invalidFormatException.getPath().getLast().getPropertyName();
 
-        String error = LocalDate.class.equals(invalidFormatException.getTargetType())
-                ? "Data inválida. Use o formato yyyy-MM-dd."
-                : "Valor inválido.";
+        Class<?> targetType = invalidFormatException.getTargetType();
+        String error;
+
+        if (LocalDate.class.equals(targetType)) {
+            error = "Data inválida. Use o formato yyyy-MM-dd.";
+        } else if (targetType.isEnum()) {
+            String acceptedValues = Arrays.stream(targetType.getEnumConstants())
+                    .map(Object::toString)
+                    .reduce((first, second) -> first + ", " + second)
+                    .orElse("");
+
+            error = "Valor inválido. Valores aceitos: " + acceptedValues + ".";
+        } else {
+            error = "Valor inválido.";
+        }
 
         ErrorResponseDTO response = new ErrorResponseDTO(
                 HttpStatus.BAD_REQUEST.value(),

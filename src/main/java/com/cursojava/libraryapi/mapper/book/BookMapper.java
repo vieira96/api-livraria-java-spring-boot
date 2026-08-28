@@ -10,9 +10,11 @@ public class BookMapper {
                 bookModel.getId(),
                 bookModel.getTitle(),
                 bookModel.getIsbn(),
-                bookModel.getPublishDate().toString(),
+                bookModel.getPublishDate(),
                 bookModel.getGender().name(),
                 bookModel.getPrice(),
+                bookModel.getCreatedAt(),
+                bookModel.getUpdatedAt(),
                 AuthorMapper.toAuthorResponseDTO(bookModel.getAuthor())
         );
     }
