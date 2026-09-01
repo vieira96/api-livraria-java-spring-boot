@@ -8,5 +8,5 @@ import java.util.UUID;
 
 public interface BookRepository extends JpaRepository<BookModel, UUID>, JpaSpecificationExecutor<BookModel> {
     boolean existsByAuthorId(UUID authorId);
-    boolean existsByIsbn(String isbn);
+    boolean existsByIsbnAndIdNot(String isbn, UUID bookId);
 }

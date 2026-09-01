@@ -9,10 +9,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -26,5 +25,26 @@ public class BookController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(BookMapper.toBookResponseDTO(bookModel));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<BookResponseDTO> getBook(@PathVariable UUID bookId) {
+        BookModel book = bookService.getBookById(bookId);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(BookMapper.toBookResponseDTO(book));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<BookResponseDTO> updateBook(
+            @PathVariable UUID bookId,
+            @Valid @RequestBody CreateBookDTO request
+    ) {
+        BookModel book = bookService.updateBook(bookId, request);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(BookMapper.toBookResponseDTO(book));
     }
 }

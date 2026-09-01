@@ -20,7 +20,7 @@ public class BookService {
 
     public BookModel createBook(CreateBookDTO request) {
         AuthorModel author = authorValidator.authorExists(request.authorId());
-        bookValidator.verifyIfBookExistsWithISBN(request.isbn());
+        bookValidator.verifyIfBookExistsByISBN(request.isbn(), null);
         BookModel bookModel = new BookModel();
         bookModel.setTitle(request.title());
         bookModel.setIsbn(request.isbn());
@@ -30,5 +30,23 @@ public class BookService {
         bookModel.setAuthor(author);
 
         return bookRepository.save(bookModel);
+    }
+
+    public BookModel getBookById(UUID bookId) {
+        return bookValidator.verifyIfBookExists(bookId);
+    }
+
+    public BookModel updateBook(UUID bookId, CreateBookDTO request) {
+        BookModel book = this.getBookById(bookId);
+        AuthorModel author = authorValidator.authorExists(request.authorId());
+        bookValidator.verifyIfBookExistsByISBN(request.isbn(), bookId);
+        book.setTitle(request.title());
+        book.setIsbn(request.isbn());
+        book.setPublishDate(request.publishDate());
+        book.setGender(request.gender());
+        book.setPrice(request.price());
+        book.setAuthor(author);
+
+        return bookRepository.save(book);
     }
 }
