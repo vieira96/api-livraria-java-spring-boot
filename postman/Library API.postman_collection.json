@@ -1,0 +1,143 @@
+{
+  "info": {
+    "_postman_id": "c6a75176-9dc6-4953-9811-0a852880d8ba",
+    "name": "Library API",
+    "description": "Collection para testar a API de autores e livros. As requisições de criação salvam automaticamente os IDs nas variáveis da collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000/api" },
+    { "key": "authorId", "value": "" },
+    { "key": "bookId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Authors",
+      "item": [
+        {
+          "name": "Create author",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Machado de Assis\",\n  \"birthdate\": \"1839-06-21\",\n  \"nationality\": \"Brasileira\"\n}"
+            },
+            "url": "{{baseUrl}}/authors"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.collectionVariables.set('authorId', pm.response.json().id);"
+            ] }
+          }]
+        },
+        {
+          "name": "List authors",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/authors?page=1&size=10&search=Machado&sortBy=NAME&direction=ASC",
+              "host": ["{{baseUrl}}"],
+              "path": ["authors"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "size", "value": "10" },
+                { "key": "search", "value": "Machado", "disabled": true },
+                { "key": "sortBy", "value": "NAME", "disabled": true },
+                { "key": "direction", "value": "ASC", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get author by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/authors/{{authorId}}" }
+        },
+        {
+          "name": "Update author",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Machado de Assis\",\n  \"birthdate\": \"1839-06-21\",\n  \"nationality\": \"Brasil\"\n}"
+            },
+            "url": "{{baseUrl}}/authors/{{authorId}}"
+          }
+        },
+        {
+          "name": "Delete author (run last)",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/authors/{{authorId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Books",
+      "item": [
+        {
+          "name": "Create book",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Dom Casmurro\",\n  \"isbn\": \"978-85-359-0277-8\",\n  \"publishDate\": \"1899-01-01\",\n  \"gender\": \"FICCAO\",\n  \"price\": 49.90,\n  \"authorId\": \"{{authorId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/books"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.collectionVariables.set('bookId', pm.response.json().id);"
+            ] }
+          }]
+        },
+        {
+          "name": "List books — filters",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/books?page=1&size=10&authorId={{authorId}}&search=Dom&sortBy=TITLE&direction=ASC",
+              "host": ["{{baseUrl}}"],
+              "path": ["books"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "size", "value": "10" },
+                { "key": "authorId", "value": "{{authorId}}" },
+                { "key": "search", "value": "Dom", "disabled": true },
+                { "key": "title", "value": "Dom", "disabled": true },
+                { "key": "isbn", "value": "978", "disabled": true },
+                { "key": "gender", "value": "FICCAO", "disabled": true },
+                { "key": "sortBy", "value": "TITLE", "disabled": true },
+                { "key": "direction", "value": "ASC", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get book by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/books/{{bookId}}" }
+        },
+        {
+          "name": "Update book",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Dom Casmurro — edição revisada\",\n  \"isbn\": \"978-85-359-0277-8\",\n  \"publishDate\": \"1899-01-01\",\n  \"gender\": \"FICCAO\",\n  \"price\": 59.90,\n  \"authorId\": \"{{authorId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/books/{{bookId}}"
+          }
+        },
+        {
+          "name": "Delete book (run before deleting author)",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/books/{{bookId}}" }
+        }
+      ]
+    }
+  ]
+}
