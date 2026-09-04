@@ -35,10 +35,9 @@ public class AuthorController {
 
     @GetMapping("/{id}")
     public ResponseEntity<AuthorResponseDTO> getAuthor(
-            @PathVariable String id,
+            @PathVariable("id") UUID authorId,
             @Valid @ModelAttribute AuthorFiltersDTO filters
     ) {
-        UUID authorId = UUID.fromString(id);
         AuthorModel author = authorService.getAuthorById(authorId);
         Long bookCount = filters.includesBookCount()
                 ? authorService.getBookCountsByAuthorIds(List.of(authorId))
@@ -72,8 +71,10 @@ public class AuthorController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AuthorResponseDTO> updateAuthor(@Valid @PathVariable String id, @RequestBody CreateAuthorDTO request) {
-        UUID authorId = UUID.fromString(id);
+    public ResponseEntity<AuthorResponseDTO> updateAuthor(
+            @PathVariable("id") UUID authorId,
+            @Valid @RequestBody CreateAuthorDTO request
+    ) {
         AuthorModel updatedAuthor = authorService.updateAuthor(authorId, request);
 
         return ResponseEntity
@@ -82,8 +83,7 @@ public class AuthorController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteAuthor(@PathVariable String id) {
-        UUID authorId = UUID.fromString(id);
+    public ResponseEntity<Void> deleteAuthor(@PathVariable("id") UUID authorId) {
         authorService.deleteAuthor(authorId);
 
         return ResponseEntity.noContent().build();
