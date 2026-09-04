@@ -1,6 +1,7 @@
 package com.cursojava.libraryapi.dto.author;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -14,5 +15,7 @@ public record AuthorResponseDTO(
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm", timezone = "America/Sao_Paulo")
         Instant createdAt,
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm", timezone = "America/Sao_Paulo")
-        Instant updatedAt
+        Instant updatedAt,
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        Long bookCount
 ) {}

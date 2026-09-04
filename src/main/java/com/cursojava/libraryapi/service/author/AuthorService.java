@@ -4,6 +4,7 @@ import com.cursojava.libraryapi.dto.author.CreateAuthorDTO;
 import com.cursojava.libraryapi.dto.author.AuthorFiltersDTO;
 import com.cursojava.libraryapi.model.author.AuthorModel;
 import com.cursojava.libraryapi.repository.author.AuthorRepository;
+import com.cursojava.libraryapi.repository.book.BookRepository;
 import com.cursojava.libraryapi.validator.author.AuthorValidator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -26,6 +29,7 @@ public class AuthorService {
     );
 
     private final AuthorRepository authorRepository;
+    private final BookRepository bookRepository;
     private final AuthorValidator authorValidator;
 
     @Transactional
@@ -93,6 +97,18 @@ public class AuthorService {
         );
 
         return authorRepository.findAll(specification, pageable);
+    }
+
+    public Map<UUID, Long> getBookCountsByAuthorIds(Collection<UUID> authorIds) {
+        if (authorIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return bookRepository.countBooksByAuthorIds(authorIds).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        projection -> projection.getAuthorId(),
+                        projection -> projection.getBookCount()
+                ));
     }
 
     @Transactional

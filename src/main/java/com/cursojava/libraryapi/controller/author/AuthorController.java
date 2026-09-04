@@ -15,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import java.util.Map;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/authors")
@@ -32,21 +34,39 @@ public class AuthorController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AuthorResponseDTO> getAuthor(@PathVariable String id) {
+    public ResponseEntity<AuthorResponseDTO> getAuthor(
+            @PathVariable String id,
+            @Valid @ModelAttribute AuthorFiltersDTO filters
+    ) {
         UUID authorId = UUID.fromString(id);
         AuthorModel author = authorService.getAuthorById(authorId);
+        Long bookCount = filters.includesBookCount()
+                ? authorService.getBookCountsByAuthorIds(List.of(authorId))
+                        .getOrDefault(authorId, 0L)
+                : null;
 
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(AuthorMapper.toAuthorResponseDTO(author));
+                .body(AuthorMapper.toAuthorResponseDTO(author, bookCount));
     }
 
     @GetMapping
     public ResponseEntity<PageResponseDTO<AuthorResponseDTO>> getAuthors(
             @Valid @ModelAttribute AuthorFiltersDTO filters
     ) {
-        Page<AuthorResponseDTO> authors = authorService.getAuthors(filters)
-                .map(AuthorMapper::toAuthorResponseDTO);
+        Page<AuthorModel> authorPage = authorService.getAuthors(filters);
+        Map<UUID, Long> bookCounts = filters.includesBookCount()
+                ? authorService.getBookCountsByAuthorIds(
+                        authorPage.getContent().stream().map(AuthorModel::getId).toList()
+                )
+                : Map.of();
+
+        Page<AuthorResponseDTO> authors = authorPage.map(author ->
+                AuthorMapper.toAuthorResponseDTO(
+                        author,
+                        filters.includesBookCount() ? bookCounts.getOrDefault(author.getId(), 0L) : null
+                )
+        );
 
         return ResponseEntity.ok(PageResponseDTO.from(authors));
     }

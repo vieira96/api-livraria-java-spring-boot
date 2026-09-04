@@ -4,12 +4,15 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.data.domain.Sort;
 
+import java.util.Arrays;
+
 public record AuthorFiltersDTO(
         @Min(0) Integer page,
         @Min(1) @Max(100) Integer size,
         String name,
         String search,
         String nationality,
+        String include,
         AuthorSortBy sortBy,
         Sort.Direction direction
 ) {
@@ -27,5 +30,11 @@ public record AuthorFiltersDTO(
 
     public Sort.Direction directionOrDefault() {
         return direction == null ? Sort.Direction.DESC : direction;
+    }
+
+    public boolean includesBookCount() {
+        return include != null && Arrays.stream(include.split(","))
+                .map(String::trim)
+                .anyMatch("bookCount"::equals);
     }
 }

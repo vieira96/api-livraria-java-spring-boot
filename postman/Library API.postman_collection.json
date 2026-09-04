@@ -38,7 +38,7 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/authors?page=1&size=10&search=Machado&sortBy=NAME&direction=ASC",
+              "raw": "{{baseUrl}}/authors?page=1&size=10",
               "host": ["{{baseUrl}}"],
               "path": ["authors"],
               "query": [
@@ -46,14 +46,25 @@
                 { "key": "size", "value": "10" },
                 { "key": "search", "value": "Machado", "disabled": true },
                 { "key": "sortBy", "value": "NAME", "disabled": true },
-                { "key": "direction", "value": "ASC", "disabled": true }
+                { "key": "direction", "value": "ASC", "disabled": true },
+                { "key": "include", "value": "bookCount", "disabled": true }
               ]
             }
           }
         },
         {
           "name": "Get author by ID",
-          "request": { "method": "GET", "url": "{{baseUrl}}/authors/{{authorId}}" }
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/authors/{{authorId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["authors", "{{authorId}}"],
+              "query": [
+                { "key": "include", "value": "bookCount", "disabled": true }
+              ]
+            }
+          }
         },
         {
           "name": "Update author",
