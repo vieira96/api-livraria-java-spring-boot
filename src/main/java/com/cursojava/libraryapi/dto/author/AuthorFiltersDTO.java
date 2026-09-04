@@ -1,5 +1,6 @@
 package com.cursojava.libraryapi.dto.author;
 
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.data.domain.Sort;
@@ -12,7 +13,10 @@ public record AuthorFiltersDTO(
         String name,
         String search,
         String nationality,
-        String include,
+        @Parameter(
+                description = "Dados adicionais na resposta. Aceita bookCount para retornar a quantidade de livros do autor.",
+                example = "bookCount"
+        ) String include,
         AuthorSortBy sortBy,
         Sort.Direction direction
 ) {

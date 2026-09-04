@@ -7,6 +7,7 @@ import com.cursojava.libraryapi.dto.global.PageResponseDTO;
 import com.cursojava.libraryapi.mapper.author.AuthorMapper;
 import com.cursojava.libraryapi.model.author.AuthorModel;
 import com.cursojava.libraryapi.service.author.AuthorService;
+import org.springdoc.core.annotations.ParameterObject;
 import lombok.RequiredArgsConstructor;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -34,7 +35,7 @@ public class AuthorController {
     @GetMapping("/{id}")
     public ResponseEntity<AuthorResponseDTO> getAuthor(
             @PathVariable("id") UUID authorId,
-            @Valid @ModelAttribute AuthorFiltersDTO filters
+            @ParameterObject @Valid @ModelAttribute AuthorFiltersDTO filters
     ) {
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -43,7 +44,7 @@ public class AuthorController {
 
     @GetMapping
     public ResponseEntity<PageResponseDTO<AuthorResponseDTO>> getAuthors(
-            @Valid @ModelAttribute AuthorFiltersDTO filters
+            @ParameterObject @Valid @ModelAttribute AuthorFiltersDTO filters
     ) {
         Page<AuthorResponseDTO> authors = authorService.getAuthors(filters);
 

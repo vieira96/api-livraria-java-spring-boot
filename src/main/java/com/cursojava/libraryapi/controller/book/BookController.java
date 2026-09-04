@@ -7,6 +7,7 @@ import com.cursojava.libraryapi.dto.global.PageResponseDTO;
 import com.cursojava.libraryapi.mapper.book.BookMapper;
 import com.cursojava.libraryapi.model.book.BookModel;
 import com.cursojava.libraryapi.service.book.BookService;
+import org.springdoc.core.annotations.ParameterObject;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -32,7 +33,7 @@ public class BookController {
 
     @GetMapping
     public ResponseEntity<PageResponseDTO<BookResponseDTO>> getBooks(
-            @Valid @ModelAttribute BookFiltersDTO filters
+            @ParameterObject @Valid @ModelAttribute BookFiltersDTO filters
     ) {
         Page<BookResponseDTO> books = bookService.getBooks(filters)
                 .map(BookMapper::toBookResponseDTO);

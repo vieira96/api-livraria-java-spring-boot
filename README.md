@@ -23,17 +23,17 @@ cp .env.example .env
 Confira no `.env` se `POSTGRES_PASSWORD` e `DB_PASSWORD` têm o mesmo valor. Depois suba a API e o banco:
 
 ```bash
-docker compose -f docker/docker-compose.yml up --build
+docker compose --env-file .env -f docker/docker-compose.yml up --build
 ```
 
 Esse comando sobe o PostgreSQL e inicia a API com Maven e Spring Boot DevTools na porta definida por `SERVER_PORT` no `.env` (`8000` se ela não for informada). Não é necessário instalar Java ou Maven na máquina; basta ter Docker ou Docker Desktop.
 
-Com `SERVER_PORT=8000`, a API fica disponível em `http://localhost:8000/api`.
+A porta da API é definida por `SERVER_PORT` no `.env`. Com o valor padrão (`8000`), ela fica disponível em `http://localhost:8000/api`.
 
 Para parar os containers:
 
 ```bash
-docker compose -f docker/docker-compose.yml down
+docker compose --env-file .env -f docker/docker-compose.yml down
 ```
 
 ## Desenvolvimento
@@ -41,12 +41,28 @@ docker compose -f docker/docker-compose.yml down
 O projeto inclui o Spring Boot DevTools. Para desenvolver com atualização automática após salvar arquivos em `src`, inicie com Docker Compose Watch:
 
 ```bash
-docker compose -f docker/docker-compose.yml up --build --watch
+docker compose --env-file .env -f docker/docker-compose.yml up --build --watch
 ```
 
 Alterações em `src` são sincronizadas e reiniciam a API. Mudanças no `pom.xml` disparam um novo build da imagem.
 
 As tabelas são criadas e versionadas pelo Flyway na inicialização.
+
+## Documentação da API
+
+A API usa OpenAPI, gerado pelo Springdoc, e a interface Scalar para a documentação interativa.
+
+No `.env`, o valor padrão de `SERVER_PORT` é `8000`. Se você alterá-lo, use o mesmo valor nas URLs abaixo.
+
+```text
+http://localhost:8000/scalar
+```
+
+O documento OpenAPI em JSON fica em:
+
+```text
+http://localhost:8000/v3/api-docs
+```
 
 ## Endpoints principais
 
@@ -121,9 +137,9 @@ A contagem é feita com uma consulta agregada para os autores retornados na pág
 Execute os testes no container de desenvolvimento:
 
 ```bash
-docker compose -f docker/docker-compose.yml run --rm --build api ./mvnw test
+docker compose --env-file .env -f docker/docker-compose.yml run --rm --build api ./mvnw test
 ```
 
 ## Postman
 
-A collection está em [postman/Library API.postman_collection.json](postman/Library%20API.postman_collection.json). Importe o arquivo no Postman e use a variável `baseUrl` já configurada para `http://localhost:8000/api`.
+A collection está em [postman/Library API.postman_collection.json](postman/Library%20API.postman_collection.json). Importe o arquivo no Postman e ajuste a variável `baseUrl` para `http://localhost:SERVER_PORT/api`, usando o valor definido no seu `.env`.
