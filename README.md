@@ -14,13 +14,23 @@ API REST para cadastro e consulta de autores e livros. O projeto foi feito para 
 
 ## Rodando com Docker
 
-Crie o arquivo de ambiente a partir do exemplo:
+Você pode preparar o ambiente e subir o projeto com:
+
+```bash
+bash run-project.sh
+```
+
+O script cria o `.env` a partir do `.env.example` quando necessário, valida o Docker e inicia a API com o PostgreSQL em modo Watch. Mantenha o terminal aberto enquanto estiver desenvolvendo; use `Ctrl+C` para encerrar.
+
+Se preferir rodar manualmente, crie o arquivo de ambiente a partir do exemplo:
 
 ```bash
 cp .env.example .env
 ```
 
-Confira no `.env` se `POSTGRES_PASSWORD` e `DB_PASSWORD` têm o mesmo valor. Depois suba a API e o banco:
+No `.env`, as variáveis `POSTGRES_*` configuram o container do banco e as `DB_*` são usadas pela API para se conectar. Mantenha `POSTGRES_USER` e `DB_USERNAME` iguais, assim como `POSTGRES_PASSWORD` e `DB_PASSWORD`. A `DB_URL` também deve apontar para o banco definido em `POSTGRES_DB`.
+
+Depois suba a API e o banco:
 
 ```bash
 docker compose --env-file .env -f docker/docker-compose.yml up --build
