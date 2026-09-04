@@ -21,7 +21,7 @@ public class BookValidator {
     }
 
     public BookModel verifyIfBookExists(UUID bookId) {
-        return bookRepository.findById(bookId).orElseThrow(() ->
+        return bookRepository.findWithAuthorById(bookId).orElseThrow(() ->
                 new NotFoundException("Livro com o ID: " + bookId + " Não encontrado"));
     }
 }
