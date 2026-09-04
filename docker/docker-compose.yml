@@ -15,5 +15,26 @@ services:
       timeout: 5s
       retries: 5
 
+  api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: libraryapi-api
+    restart: unless-stopped
+    env_file:
+      - ${ENV_FILE:-../.env}
+    ports:
+      - "${SERVER_PORT:-8000}:${SERVER_PORT:-8000}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    develop:
+      watch:
+        - action: sync+restart
+          path: ../src
+          target: /app/src
+        - action: rebuild
+          path: ../pom.xml
+
 volumes:
   postgres_data:

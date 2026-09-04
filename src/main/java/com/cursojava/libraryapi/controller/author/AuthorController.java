@@ -15,8 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
-import java.util.Map;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/authors")
@@ -38,34 +36,16 @@ public class AuthorController {
             @PathVariable("id") UUID authorId,
             @Valid @ModelAttribute AuthorFiltersDTO filters
     ) {
-        AuthorModel author = authorService.getAuthorById(authorId);
-        Long bookCount = filters.includesBookCount()
-                ? authorService.getBookCountsByAuthorIds(List.of(authorId))
-                        .getOrDefault(authorId, 0L)
-                : null;
-
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(AuthorMapper.toAuthorResponseDTO(author, bookCount));
+                .body(authorService.getAuthor(authorId, filters));
     }
 
     @GetMapping
     public ResponseEntity<PageResponseDTO<AuthorResponseDTO>> getAuthors(
             @Valid @ModelAttribute AuthorFiltersDTO filters
     ) {
-        Page<AuthorModel> authorPage = authorService.getAuthors(filters);
-        Map<UUID, Long> bookCounts = filters.includesBookCount()
-                ? authorService.getBookCountsByAuthorIds(
-                        authorPage.getContent().stream().map(AuthorModel::getId).toList()
-                )
-                : Map.of();
-
-        Page<AuthorResponseDTO> authors = authorPage.map(author ->
-                AuthorMapper.toAuthorResponseDTO(
-                        author,
-                        filters.includesBookCount() ? bookCounts.getOrDefault(author.getId(), 0L) : null
-                )
-        );
+        Page<AuthorResponseDTO> authors = authorService.getAuthors(filters);
 
         return ResponseEntity.ok(PageResponseDTO.from(authors));
     }

@@ -12,7 +12,7 @@ API REST para cadastro e consulta de autores e livros. O projeto foi feito para 
 - Docker Compose
 - Maven
 
-## Rodando localmente
+## Rodando com Docker
 
 Crie o arquivo de ambiente a partir do exemplo:
 
@@ -20,19 +20,31 @@ Crie o arquivo de ambiente a partir do exemplo:
 cp .env.example .env
 ```
 
-Confira no `.env` se `POSTGRES_PASSWORD` e `DB_PASSWORD` têm o mesmo valor. Depois suba o banco:
+Confira no `.env` se `POSTGRES_PASSWORD` e `DB_PASSWORD` têm o mesmo valor. Depois suba a API e o banco:
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d
+docker compose -f docker/docker-compose.yml up --build
 ```
 
-Com o PostgreSQL disponível, inicie a aplicação:
+Esse comando sobe o PostgreSQL e inicia a API com Maven e Spring Boot DevTools na porta definida por `SERVER_PORT` no `.env` (`8000` se ela não for informada). Não é necessário instalar Java ou Maven na máquina; basta ter Docker ou Docker Desktop.
+
+Com `SERVER_PORT=8000`, a API fica disponível em `http://localhost:8000/api`.
+
+Para parar os containers:
 
 ```bash
-./mvnw spring-boot:run
+docker compose -f docker/docker-compose.yml down
 ```
 
-A API fica disponível em `http://localhost:8000/api`.
+## Desenvolvimento
+
+O projeto inclui o Spring Boot DevTools. Para desenvolver com atualização automática após salvar arquivos em `src`, inicie com Docker Compose Watch:
+
+```bash
+docker compose -f docker/docker-compose.yml up --build --watch
+```
+
+Alterações em `src` são sincronizadas e reiniciam a API. Mudanças no `pom.xml` disparam um novo build da imagem.
 
 As tabelas são criadas e versionadas pelo Flyway na inicialização.
 
@@ -106,10 +118,10 @@ A contagem é feita com uma consulta agregada para os autores retornados na pág
 
 ## Testes
 
-Com o PostgreSQL em execução e as variáveis do `.env` configuradas:
+Execute os testes no container de desenvolvimento:
 
 ```bash
-./mvnw test
+docker compose -f docker/docker-compose.yml run --rm --build api ./mvnw test
 ```
 
 ## Postman

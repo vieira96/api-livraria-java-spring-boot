@@ -2,6 +2,8 @@ package com.cursojava.libraryapi.service.author;
 
 import com.cursojava.libraryapi.dto.author.CreateAuthorDTO;
 import com.cursojava.libraryapi.dto.author.AuthorFiltersDTO;
+import com.cursojava.libraryapi.dto.author.AuthorResponseDTO;
+import com.cursojava.libraryapi.mapper.author.AuthorMapper;
 import com.cursojava.libraryapi.model.author.AuthorModel;
 import com.cursojava.libraryapi.repository.author.AuthorRepository;
 import com.cursojava.libraryapi.repository.book.BookRepository;
@@ -15,6 +17,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -45,8 +48,13 @@ public class AuthorService {
         return authorRepository.save(authorModel);
     }
 
-    public AuthorModel getAuthorById(UUID id) {
-        return authorValidator.authorExists(id);
+    public AuthorResponseDTO getAuthor(UUID id, AuthorFiltersDTO filters) {
+        AuthorModel author = authorValidator.authorExists(id);
+        Long bookCount = filters.includesBookCount()
+                ? getBookCountsByAuthorIds(List.of(id)).getOrDefault(id, 0L)
+                : null;
+
+        return AuthorMapper.toAuthorResponseDTO(author, bookCount);
     }
 
     @Transactional
@@ -65,7 +73,7 @@ public class AuthorService {
         return authorRepository.save(authorModel);
     }
 
-    public Page<AuthorModel> getAuthors(AuthorFiltersDTO filters) {
+    public Page<AuthorResponseDTO> getAuthors(AuthorFiltersDTO filters) {
         Specification<AuthorModel> specification = Specification.unrestricted();
 
         if (filters.search() != null && !filters.search().isBlank()) {
@@ -96,10 +104,20 @@ public class AuthorService {
                 Sort.by(filters.directionOrDefault(), filters.sortByOrDefault().getProperty())
         );
 
-        return authorRepository.findAll(specification, pageable);
+        Page<AuthorModel> authorPage = authorRepository.findAll(specification, pageable);
+        Map<UUID, Long> bookCounts = filters.includesBookCount()
+                ? getBookCountsByAuthorIds(
+                        authorPage.getContent().stream().map(AuthorModel::getId).toList()
+                )
+                : Map.of();
+
+        return authorPage.map(author -> AuthorMapper.toAuthorResponseDTO(
+                author,
+                filters.includesBookCount() ? bookCounts.getOrDefault(author.getId(), 0L) : null
+        ));
     }
 
-    public Map<UUID, Long> getBookCountsByAuthorIds(Collection<UUID> authorIds) {
+    private Map<UUID, Long> getBookCountsByAuthorIds(Collection<UUID> authorIds) {
         if (authorIds.isEmpty()) {
             return Map.of();
         }
