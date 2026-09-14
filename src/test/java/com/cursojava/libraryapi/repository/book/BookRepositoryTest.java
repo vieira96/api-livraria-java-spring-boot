@@ -1,95 +1,135 @@
 package com.cursojava.libraryapi.repository.book;
 
+import com.cursojava.libraryapi.config.AuditingConfiguration;
 import com.cursojava.libraryapi.model.author.AuthorModel;
 import com.cursojava.libraryapi.model.book.BookGender;
 import com.cursojava.libraryapi.model.book.BookModel;
 import com.cursojava.libraryapi.repository.author.AuthorRepository;
-import com.cursojava.libraryapi.validator.author.AuthorValidator;
+import com.cursojava.libraryapi.support.PostgresTestContainer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Locale;
-import java.util.Optional;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
-@SpringBootTest
-public class BookRepositoryTest {
+import static org.assertj.core.api.Assertions.assertThat;
+
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import(AuditingConfiguration.class)
+class BookRepositoryTest extends PostgresTestContainer {
 
     @Autowired
-    BookRepository bookRepository;
+    private BookRepository bookRepository;
 
     @Autowired
-    AuthorRepository authorRepository;
-
-    @Autowired
-    AuthorValidator authorValidator;
+    private AuthorRepository authorRepository;
 
     @Test
-    public void saveTest() {
-        UUID authorId = UUID.fromString("5a5c90df-d629-45a2-b0ce-5aff66cd3c9e");
-        AuthorModel author = authorValidator.authorExists(authorId);
+    void shouldSaveBook() {
+        AuthorModel author = saveAuthor("J. R. R. Tolkien");
+        BookModel book = createBook(author, "9780261102385", "The Lord of the Rings", LocalDate.of(1954, 7, 29));
 
+        BookModel savedBook = bookRepository.saveAndFlush(book);
+
+        assertThat(savedBook.getId()).isNotNull();
+        assertThat(savedBook.getCreatedAt()).isNotNull();
+        assertThat(savedBook.getUpdatedAt()).isNotNull();
+        assertThat(bookRepository.findWithAuthorById(savedBook.getId()))
+                .isPresent()
+                .get()
+                .extracting(BookModel::getAuthor)
+                .isEqualTo(author);
+    }
+
+    @Test
+    void shouldFindBooksByTitleWithPagination() {
+        AuthorModel author = saveAuthor("Isaac Asimov");
+        bookRepository.saveAndFlush(createBook(author, "9780553293357", "Foundation", LocalDate.of(1951, 6, 1)));
+        bookRepository.saveAndFlush(createBook(author, "9780553293364", "Foundation and Empire", LocalDate.of(1952, 1, 1)));
+        bookRepository.saveAndFlush(createBook(author, "9780451524935", "Nineteen Eighty-Four", LocalDate.of(1949, 6, 8)));
+
+        Specification<BookModel> titleContainsFoundation = (root, query, criteriaBuilder) ->
+                criteriaBuilder.like(
+                        criteriaBuilder.lower(root.get("title")),
+                        "%foundation%"
+                );
+
+        Page<BookModel> result = bookRepository.findAll(titleContainsFoundation, PageRequest.of(0, 10));
+
+        assertThat(result.getTotalElements()).isEqualTo(2);
+        assertThat(result.getContent())
+                .extracting(BookModel::getTitle)
+                .containsExactlyInAnyOrder("Foundation", "Foundation and Empire");
+    }
+
+    @Test
+    void shouldCheckIfBooksExistByAuthor() {
+        AuthorModel author = saveAuthor("George Orwell");
+        bookRepository.saveAndFlush(createBook(author, "9780451524935", "Nineteen Eighty-Four", LocalDate.of(1949, 6, 8)));
+
+        assertThat(bookRepository.existsByAuthorId(author.getId())).isTrue();
+        assertThat(bookRepository.existsByAuthorId(UUID.randomUUID())).isFalse();
+    }
+
+    @Test
+    void shouldCheckIfAnotherBookExistsWithSameIsbn() {
+        AuthorModel author = saveAuthor("Frank Herbert");
+        BookModel book = bookRepository.saveAndFlush(
+                createBook(author, "9780441172719", "Dune", LocalDate.of(1965, 8, 1))
+        );
+
+        assertThat(bookRepository.existsByIsbnAndIdNot(book.getIsbn(), UUID.randomUUID())).isTrue();
+        assertThat(bookRepository.existsByIsbnAndIdNot(book.getIsbn(), book.getId())).isFalse();
+    }
+
+    @Test
+    void shouldCountBooksByAuthorIds() {
+        AuthorModel firstAuthor = saveAuthor("Isaac Asimov");
+        AuthorModel secondAuthor = saveAuthor("George Orwell");
+        bookRepository.saveAndFlush(createBook(firstAuthor, "9780553293357", "Foundation", LocalDate.of(1951, 6, 1)));
+        bookRepository.saveAndFlush(createBook(firstAuthor, "9780553293364", "Foundation and Empire", LocalDate.of(1952, 1, 1)));
+        bookRepository.saveAndFlush(createBook(secondAuthor, "9780451524935", "Nineteen Eighty-Four", LocalDate.of(1949, 6, 8)));
+
+        Map<UUID, Long> counts = bookRepository.countBooksByAuthorIds(
+                        List.of(firstAuthor.getId(), secondAuthor.getId())
+                ).stream()
+                .collect(Collectors.toMap(
+                        AuthorBookCountProjection::getAuthorId,
+                        AuthorBookCountProjection::getBookCount
+                ));
+
+        assertThat(counts)
+                .containsEntry(firstAuthor.getId(), 2L)
+                .containsEntry(secondAuthor.getId(), 1L);
+    }
+
+    private AuthorModel saveAuthor(String name) {
+        AuthorModel author = new AuthorModel();
+        author.setName(name);
+        author.setBirthdate(LocalDate.of(1920, 1, 1));
+        author.setNationality("British");
+        return authorRepository.saveAndFlush(author);
+    }
+
+    private BookModel createBook(AuthorModel author, String isbn, String title, LocalDate publishDate) {
         BookModel book = new BookModel();
-        book.setIsbn(UUID.randomUUID().toString().replace("-", "").substring(0, 20));
-        book.setTitle("Livro de teste");
-        book.setPublishDate(LocalDate.now());
+        book.setIsbn(isbn);
+        book.setTitle(title);
+        book.setPublishDate(publishDate);
         book.setGender(BookGender.FICCAO);
         book.setPrice(new BigDecimal("49.90"));
         book.setAuthor(author);
-
-        BookModel bookSaved = bookRepository.saveAndFlush(book);
-
-        System.out.println("Livro persistido: " + bookSaved);
+        return book;
     }
-
-    @Test
-    public void findAll() {
-        String search = null;
-        LocalDate publishDateFrom = LocalDate.of(2020, 1, 1);
-        LocalDate publishDateTo = LocalDate.of(2020, 1, 1);
-        String sortBy = "publishDate";
-        Sort.Direction sortDirection = Sort.Direction.DESC;
-        int page = 0;
-        int size = 10;
-
-        Specification<BookModel> specification = Specification.unrestricted();
-
-        if (search != null && !search.isBlank()) {
-            specification = specification.and((root, query, criteriaBuilder) ->
-                    criteriaBuilder.like(
-                            criteriaBuilder.lower(root.get("title")),
-                            "%" + search.toLowerCase(Locale.ROOT) + "%"
-                    )
-            );
-        }
-
-        if (publishDateFrom != null) {
-            specification = specification.and((root, query, criteriaBuilder) ->
-                    criteriaBuilder.greaterThanOrEqualTo(root.get("publishDate"), publishDateFrom)
-            );
-        }
-
-        if (publishDateTo != null) {
-            specification = specification.and((root, query, criteriaBuilder) ->
-                    criteriaBuilder.lessThanOrEqualTo(root.get("publishDate"), publishDateTo)
-            );
-        }
-
-        var result = bookRepository.findAll(
-                specification,
-                PageRequest.of(page, size, Sort.by(sortDirection, sortBy))
-        );
-
-        result.forEach(System.out::println);
-        System.out.println("Página: " + result.getNumber());
-        System.out.println("Total de elementos: " + result.getTotalElements());
-        System.out.println("Total de páginas: " + result.getTotalPages());
-    }
-
 }
