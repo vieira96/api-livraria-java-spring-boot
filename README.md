@@ -1,15 +1,18 @@
 # Library API
 
-API REST para cadastro e consulta de autores e livros. O projeto foi feito para praticar uma aplicação Spring Boot com PostgreSQL, migrations, filtros e paginação.
+API REST para cadastro e consulta de autores e livros, com cadastro de usuários. O projeto foi feito para praticar uma aplicação Spring Boot com PostgreSQL, migrations, validação, filtros, paginação e testes automatizados.
 
 ## Tecnologias
 
 - Java 21
 - Spring Boot
 - Spring Data JPA
+- Spring Security Crypto (BCrypt)
 - PostgreSQL 16
 - Flyway
 - Docker Compose
+- Testcontainers
+- JUnit 5 e Mockito
 - Maven
 
 ## Rodando com Docker
@@ -78,6 +81,7 @@ http://localhost:8000/v3/api-docs
 
 | Método | Rota | Descrição |
 | --- | --- | --- |
+| `POST` | `/auth/register` | Cadastra um usuário |
 | `POST` | `/authors` | Cria um autor |
 | `GET` | `/authors` | Lista autores com filtros e paginação |
 | `GET` | `/authors/{id}` | Busca um autor |
@@ -88,6 +92,40 @@ http://localhost:8000/v3/api-docs
 | `GET` | `/books/{id}` | Busca um livro |
 | `PUT` | `/books/{id}` | Atualiza um livro |
 | `DELETE` | `/books/{id}` | Remove um livro |
+
+Todas as rotas da tabela usam o prefixo `/api`.
+
+### Cadastro de usuário
+
+O módulo de autenticação disponibiliza apenas o cadastro por enquanto. Login, geração de token e autorização ainda não foram implementados.
+
+```http
+POST /api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Maria Silva",
+  "email": "maria@example.com",
+  "password": "senha-segura"
+}
+```
+
+Em caso de sucesso, a API responde com `201 Created`:
+
+```json
+{
+  "id": "UUID_DO_USUARIO",
+  "name": "Maria Silva",
+  "email": "maria@example.com",
+  "roles": ["USER"],
+  "createdAt": "2026-09-14T19:35",
+  "updatedAt": "2026-09-14T19:35"
+}
+```
+
+O nome e o e-mail têm espaços externos removidos, e o e-mail é armazenado em letras minúsculas. A senha deve ter entre 8 e 72 caracteres, é persistida como hash BCrypt e nunca é retornada pela API. Tentativas de cadastrar o mesmo e-mail, sem diferenciar maiúsculas e minúsculas, recebem `409 Conflict`.
+
+As roles padrão `ADMIN` e `USER` são criadas pelo Flyway. Todo usuário cadastrado pela API recebe automaticamente a role `USER`. A resposta expõe somente os nomes das roles, sem os IDs nem os dados da tabela associativa `user_roles`.
 
 Exemplo para criar um autor:
 
@@ -144,12 +182,32 @@ A contagem é feita com uma consulta agregada para os autores retornados na pág
 
 ## Testes
 
-Execute os testes no container de desenvolvimento:
+Os testes de repository e os testes de integração usam um PostgreSQL temporário criado pelo Testcontainers. Eles não alteram o banco configurado no `.env`. Para executar toda a suíte, mantenha o Docker ativo e rode na raiz do projeto:
 
 ```bash
-docker compose --env-file .env -f docker/docker-compose.yml run --rm --build api ./mvnw test
+./mvnw test
+```
+
+Para executar apenas os testes de autenticação:
+
+```bash
+./mvnw -Dtest='AuthService*Test' test
+```
+
+O teste unitário do serviço usa JUnit 5 e Mockito, não inicializa o Spring e não precisa de Docker:
+
+```bash
+./mvnw -Dtest=AuthServiceUnitTest test
+```
+
+Para executar somente o teste de integração do cadastro, o Docker deve estar ativo:
+
+```bash
+./mvnw -Dtest=AuthServiceTest test
 ```
 
 ## Postman
 
 A collection está em [postman/Library API.postman_collection.json](postman/Library%20API.postman_collection.json). Importe o arquivo no Postman e ajuste a variável `baseUrl` para `http://localhost:SERVER_PORT/api`, usando o valor definido no seu `.env`.
+
+A pasta `Authentication` contém requisições para cadastro válido, e-mail duplicado e dados inválidos. Execute-as na ordem apresentada: o primeiro cadastro gera um e-mail único e o armazena em `registrationEmail`, utilizado pelo cenário de duplicidade.

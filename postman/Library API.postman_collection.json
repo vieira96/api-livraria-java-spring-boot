@@ -2,15 +2,104 @@
   "info": {
     "_postman_id": "c6a75176-9dc6-4953-9811-0a852880d8ba",
     "name": "Library API",
-    "description": "Collection para testar a API de autores e livros. As requisições de criação salvam automaticamente os IDs nas variáveis da collection.",
+    "description": "Collection para testar o cadastro de usuários e a API de autores e livros. As requisições de criação salvam automaticamente os IDs nas variáveis da collection.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8000/api" },
+    { "key": "userId", "value": "" },
+    { "key": "registrationEmail", "value": "" },
     { "key": "authorId", "value": "" },
     { "key": "bookId", "value": "" }
   ],
   "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register user",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('registrationEmail', `user.${Date.now()}@example.com`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const response = pm.response.json();",
+                  "pm.test('Returns the USER role', () => pm.expect(response.roles).to.eql(['USER']));",
+                  "pm.test('Does not expose the password', () => pm.expect(response).not.to.have.property('password'));",
+                  "pm.collectionVariables.set('userId', response.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Maria Silva\",\n  \"email\": \"{{registrationEmail}}\",\n  \"password\": \"senha-segura\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/register",
+            "description": "Cadastra um usuário com a role USER. O e-mail é gerado no pre-request script para permitir novas execuções da collection."
+          }
+        },
+        {
+          "name": "Reject duplicate email",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 409', () => pm.response.to.have.status(409));",
+                "pm.test('Returns conflict message', () => pm.expect(pm.response.json().message).to.eql('Já existe um usuário cadastrado com este e-mail.'));"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Outra Maria\",\n  \"email\": \"{{registrationEmail}}\",\n  \"password\": \"outra-senha-segura\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/register",
+            "description": "Execute depois de Register user para validar o conflito de e-mail duplicado."
+          }
+        },
+        {
+          "name": "Reject invalid registration",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                "pm.test('Returns validation errors', () => pm.expect(pm.response.json().errors).to.be.an('array').that.is.not.empty);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"M\",\n  \"email\": \"email-invalido\",\n  \"password\": \"123\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/register"
+          }
+        }
+      ]
+    },
     {
       "name": "Authors",
       "item": [
