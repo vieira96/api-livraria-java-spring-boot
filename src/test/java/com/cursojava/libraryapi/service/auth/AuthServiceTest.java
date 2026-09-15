@@ -1,11 +1,17 @@
 package com.cursojava.libraryapi.service.auth;
 
+import com.cursojava.libraryapi.dto.auth.LoginResponseDTO;
+import com.cursojava.libraryapi.dto.auth.LoginUserDTO;
+import com.cursojava.libraryapi.dto.auth.RefreshTokenDTO;
 import com.cursojava.libraryapi.dto.auth.RegisterUserDTO;
+import com.cursojava.libraryapi.exception.auth.InvalidCredentialsException;
+import com.cursojava.libraryapi.exception.auth.InvalidRefreshTokenException;
 import com.cursojava.libraryapi.exception.auth.UserAlreadyExistsException;
 import com.cursojava.libraryapi.mapper.auth.AuthMapper;
 import com.cursojava.libraryapi.model.role.RoleName;
 import com.cursojava.libraryapi.model.user.UserModel;
 import com.cursojava.libraryapi.repository.role.RoleRepository;
+import com.cursojava.libraryapi.repository.auth.RefreshTokenRepository;
 import com.cursojava.libraryapi.repository.user.UserRepository;
 import com.cursojava.libraryapi.support.PostgresTestContainer;
 import org.junit.jupiter.api.Test;
@@ -32,6 +38,9 @@ class AuthServiceTest extends PostgresTestContainer {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
 
     @Test
     void shouldRegisterUserWithNormalizedDataAndEncodedPassword() {
@@ -79,5 +88,68 @@ class AuthServiceTest extends PostgresTestContainer {
         assertThatThrownBy(() -> authService.register(duplicate))
                 .isInstanceOf(UserAlreadyExistsException.class)
                 .hasMessage("Já existe um usuário cadastrado com este e-mail.");
+    }
+
+    @Test
+    void shouldLoginRegisteredUserAndReturnJwt() {
+        authService.register(new RegisterUserDTO(
+                "Maria Silva",
+                "maria.silva@example.com",
+                "strong-password"
+        ));
+
+        LoginResponseDTO response = authService.login(new LoginUserDTO(
+                "  MARIA.SILVA@EXAMPLE.COM  ",
+                "strong-password"
+        ));
+
+        assertThat(response.accessToken().split("\\.")).hasSize(3);
+        assertThat(response.refreshToken()).isNotBlank();
+        assertThat(response.tokenType()).isEqualTo("Bearer");
+        assertThat(response.expiresIn()).isEqualTo(900L);
+        assertThat(refreshTokenRepository.findAll())
+                .singleElement()
+                .satisfies(token -> assertThat(token.getTokenHash()).doesNotContain(response.refreshToken()));
+    }
+
+    @Test
+    void shouldRejectInvalidLoginCredentials() {
+        authService.register(new RegisterUserDTO(
+                "Maria Silva",
+                "maria.silva@example.com",
+                "strong-password"
+        ));
+
+        assertThatThrownBy(() -> authService.login(new LoginUserDTO(
+                "maria.silva@example.com",
+                "wrong-password"
+        )))
+                .isInstanceOf(InvalidCredentialsException.class)
+                .hasMessage("E-mail ou senha inválidos.");
+    }
+
+    @Test
+    void shouldRotateRefreshTokenAndRejectItsReuse() {
+        authService.register(new RegisterUserDTO(
+                "Maria Silva",
+                "maria.silva@example.com",
+                "strong-password"
+        ));
+        LoginResponseDTO login = authService.login(new LoginUserDTO(
+                "maria.silva@example.com",
+                "strong-password"
+        ));
+
+        LoginResponseDTO refreshed = authService.refresh(new RefreshTokenDTO(login.refreshToken()));
+
+        assertThat(refreshed.accessToken()).isNotEqualTo(login.accessToken());
+        assertThat(refreshed.refreshToken()).isNotEqualTo(login.refreshToken());
+        assertThat(refreshed.expiresIn()).isEqualTo(900L);
+        assertThatThrownBy(() -> authService.refresh(new RefreshTokenDTO(login.refreshToken())))
+                .isInstanceOf(InvalidRefreshTokenException.class)
+                .hasMessage("Refresh token inválido ou expirado.");
+        assertThatThrownBy(() -> authService.refresh(new RefreshTokenDTO(refreshed.refreshToken())))
+                .isInstanceOf(InvalidRefreshTokenException.class)
+                .hasMessage("Refresh token inválido ou expirado.");
     }
 }

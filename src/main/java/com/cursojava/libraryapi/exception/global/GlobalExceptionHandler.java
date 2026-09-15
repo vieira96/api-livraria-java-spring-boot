@@ -2,6 +2,9 @@ package com.cursojava.libraryapi.exception.global;
 
 import com.cursojava.libraryapi.dto.error.ErrorResponseDTO;
 import com.cursojava.libraryapi.dto.error.FieldErrorDTO;
+import com.cursojava.libraryapi.exception.auth.InvalidCredentialsException;
+import com.cursojava.libraryapi.exception.auth.InvalidAccessTokenException;
+import com.cursojava.libraryapi.exception.auth.InvalidRefreshTokenException;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpStatus;
@@ -60,6 +63,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
                 .body(ErrorResponseDTO.conflict(e.getMessage()));
+    }
+
+    @ExceptionHandler({
+            InvalidCredentialsException.class,
+            InvalidRefreshTokenException.class,
+            InvalidAccessTokenException.class
+    })
+    public ResponseEntity<ErrorResponseDTO> handleAuthenticationException(RuntimeException e) {
+        ErrorResponseDTO response = new ErrorResponseDTO(
+                HttpStatus.UNAUTHORIZED.value(),
+                e.getMessage(),
+                List.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)

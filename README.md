@@ -7,7 +7,7 @@ API REST para cadastro e consulta de autores e livros, com cadastro de usuários
 - Java 21
 - Spring Boot
 - Spring Data JPA
-- Spring Security Crypto (BCrypt)
+- Spring Security Crypto (BCrypt) e OAuth2 JOSE/Nimbus para JWT HS256
 - PostgreSQL 16
 - Flyway
 - Docker Compose
@@ -82,6 +82,9 @@ http://localhost:8000/v3/api-docs
 | Método | Rota | Descrição |
 | --- | --- | --- |
 | `POST` | `/auth/register` | Cadastra um usuário |
+| `POST` | `/auth/login` | Autentica um usuário e retorna um JWT |
+| `POST` | `/auth/refresh` | Rotaciona o refresh token e retorna um novo par de tokens |
+| `GET` | `/auth/me` | Retorna os dados do usuário autenticado |
 | `POST` | `/authors` | Cria um autor |
 | `GET` | `/authors` | Lista autores com filtros e paginação |
 | `GET` | `/authors/{id}` | Busca um autor |
@@ -95,9 +98,7 @@ http://localhost:8000/v3/api-docs
 
 Todas as rotas da tabela usam o prefixo `/api`.
 
-### Cadastro de usuário
-
-O módulo de autenticação disponibiliza apenas o cadastro por enquanto. Login, geração de token e autorização ainda não foram implementados.
+### Autenticação
 
 ```http
 POST /api/auth/register
@@ -126,6 +127,53 @@ Em caso de sucesso, a API responde com `201 Created`:
 O nome e o e-mail têm espaços externos removidos, e o e-mail é armazenado em letras minúsculas. A senha deve ter entre 8 e 72 caracteres, é persistida como hash BCrypt e nunca é retornada pela API. Tentativas de cadastrar o mesmo e-mail, sem diferenciar maiúsculas e minúsculas, recebem `409 Conflict`.
 
 As roles padrão `ADMIN` e `USER` são criadas pelo Flyway. Todo usuário cadastrado pela API recebe automaticamente a role `USER`. A resposta expõe somente os nomes das roles, sem os IDs nem os dados da tabela associativa `user_roles`.
+
+Para fazer login, envie o e-mail e a senha cadastrados:
+
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "maria@example.com",
+  "password": "senha-segura"
+}
+```
+
+Em caso de sucesso, a API responde com `200 OK`:
+
+```json
+{
+  "accessToken": "JWT_DE_ACESSO",
+  "refreshToken": "REFRESH_TOKEN_OPACO",
+  "tokenType": "Bearer",
+  "expiresIn": 900
+}
+```
+
+O access token expira em 15 minutos. O refresh token expira em 7 dias, é persistido somente como hash SHA-256 e é substituído a cada renovação. Para renovar os tokens:
+
+```http
+POST /api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "REFRESH_TOKEN_RECEBIDO_NO_LOGIN"
+}
+```
+
+O refresh token enviado é revogado e a resposta contém um novo par de tokens. Tokens inválidos ou expirados retornam `401 Unauthorized`. A reutilização de um token já rotacionado é tratada como possível replay e revoga toda a família ativa de refresh tokens daquela sessão.
+
+Para consultar o usuário autenticado, envie o access token no cabeçalho Bearer:
+
+```http
+GET /api/auth/me
+Authorization: Bearer JWT_DE_ACESSO
+```
+
+A resposta contém `id`, `name`, `email`, `roles`, `createdAt` e `updatedAt`. A senha nunca é retornada. Requisições sem token, com token inválido ou expirado recebem `401 Unauthorized`.
+
+Configure `JWT_SECRET` com pelo menos 32 bytes. As durações podem ser alteradas por `JWT_ACCESS_EXPIRATION` e `REFRESH_TOKEN_EXPIRATION` no arquivo `.env`.
 
 Exemplo para criar um autor:
 
@@ -210,4 +258,4 @@ Para executar somente o teste de integração do cadastro, o Docker deve estar a
 
 A collection está em [postman/Library API.postman_collection.json](postman/Library%20API.postman_collection.json). Importe o arquivo no Postman e ajuste a variável `baseUrl` para `http://localhost:SERVER_PORT/api`, usando o valor definido no seu `.env`.
 
-A pasta `Authentication` contém requisições para cadastro válido, e-mail duplicado e dados inválidos. Execute-as na ordem apresentada: o primeiro cadastro gera um e-mail único e o armazena em `registrationEmail`, utilizado pelo cenário de duplicidade.
+A pasta `Authentication` contém requisições para cadastro, login, renovação, consulta do usuário autenticado, credenciais incorretas, e-mail duplicado e dados inválidos. Execute-as na ordem: o cadastro salva `registrationEmail`, o login salva `accessToken` e `refreshToken`, a renovação rotaciona e atualiza os dois tokens, e `/me` utiliza automaticamente o Bearer token salvo.

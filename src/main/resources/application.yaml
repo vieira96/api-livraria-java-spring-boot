@@ -24,3 +24,11 @@ scalar:
   path: /scalar
   url: /v3/api-docs
   page-title: Library API
+
+security:
+  jwt:
+    secret: ${JWT_SECRET}
+    issuer: ${JWT_ISSUER:library-api}
+    access-expiration: ${JWT_ACCESS_EXPIRATION:15m}
+  refresh-token:
+    expiration: ${REFRESH_TOKEN_EXPIRATION:7d}

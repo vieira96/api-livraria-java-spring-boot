@@ -25,5 +25,6 @@ public abstract class PostgresTestContainer {
         registry.add("DB_URL", POSTGRES::getJdbcUrl);
         registry.add("DB_USERNAME", POSTGRES::getUsername);
         registry.add("DB_PASSWORD", POSTGRES::getPassword);
+        registry.add("JWT_SECRET", () -> "integration-test-jwt-secret-with-32-bytes");
     }
 }
