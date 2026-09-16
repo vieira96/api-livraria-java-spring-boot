@@ -194,6 +194,10 @@
           "name": "Create author",
           "request": {
             "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+            },
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
@@ -206,6 +210,10 @@
           "name": "List authors",
           "request": {
             "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+            },
             "url": {
               "raw": "http://localhost:8000/api/authors?page=1&size=10",
               "protocol": "http",
@@ -227,6 +235,10 @@
           "name": "Get author by ID",
           "request": {
             "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+            },
             "url": {
               "raw": "http://localhost:8000/api/authors/COLE_O_UUID_DO_AUTOR_AQUI",
               "protocol": "http",
@@ -243,6 +255,10 @@
           "name": "Update author",
           "request": {
             "method": "PUT",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+            },
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
@@ -253,7 +269,14 @@
         },
         {
           "name": "Delete author (run last)",
-          "request": { "method": "DELETE", "url": "http://localhost:8000/api/authors/COLE_O_UUID_DO_AUTOR_AQUI" }
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+            },
+            "url": "http://localhost:8000/api/authors/COLE_O_UUID_DO_AUTOR_AQUI"
+          }
         }
       ]
     },
@@ -264,6 +287,10 @@
           "name": "Create book",
           "request": {
             "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+            },
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
@@ -276,6 +303,10 @@
           "name": "List books — filters",
           "request": {
             "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+            },
             "url": {
               "raw": "http://localhost:8000/api/books?page=1&size=10&authorId=COLE_O_UUID_DO_AUTOR_AQUI&search=Dom&sortBy=TITLE&direction=ASC",
               "protocol": "http",
@@ -298,12 +329,23 @@
         },
         {
           "name": "Get book by ID",
-          "request": { "method": "GET", "url": "http://localhost:8000/api/books/COLE_O_UUID_DO_LIVRO_AQUI" }
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+            },
+            "url": "http://localhost:8000/api/books/COLE_O_UUID_DO_LIVRO_AQUI"
+          }
         },
         {
           "name": "Update book",
           "request": {
             "method": "PUT",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+            },
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
@@ -314,7 +356,14 @@
         },
         {
           "name": "Delete book (run before deleting author)",
-          "request": { "method": "DELETE", "url": "http://localhost:8000/api/books/COLE_O_UUID_DO_LIVRO_AQUI" }
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+            },
+            "url": "http://localhost:8000/api/books/COLE_O_UUID_DO_LIVRO_AQUI"
+          }
         }
       ]
     }
