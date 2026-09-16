@@ -3,7 +3,7 @@ package com.cursojava.libraryapi.controller.auth;
 import com.cursojava.libraryapi.dto.auth.LoginUserDTO;
 import com.cursojava.libraryapi.dto.auth.RegisterUserDTO;
 import com.cursojava.libraryapi.service.auth.AuthService;
-import com.cursojava.libraryapi.support.PostgresTestContainer;
+import com.cursojava.libraryapi.support.IntegrationTestContainer;
 import com.cursojava.libraryapi.repository.auth.RefreshTokenRepository;
 import com.cursojava.libraryapi.repository.user.UserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -21,7 +21,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class AuthControllerTest extends PostgresTestContainer {
+class AuthControllerTest extends IntegrationTestContainer {
 
     @LocalServerPort
     private int port;
@@ -61,7 +61,7 @@ class AuthControllerTest extends PostgresTestContainer {
                 "strong-password"
         ));
         createdUserId = registeredUser.getId();
-        var login = authService.login(new LoginUserDTO(email, "strong-password"));
+        var login = authService.login(new LoginUserDTO(email, "strong-password"), "127.0.0.1");
 
         HttpResponse<String> response = getMe(login.accessToken());
 

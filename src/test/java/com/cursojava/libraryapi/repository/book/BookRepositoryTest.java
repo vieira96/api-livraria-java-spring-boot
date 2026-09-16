@@ -5,7 +5,7 @@ import com.cursojava.libraryapi.model.author.AuthorModel;
 import com.cursojava.libraryapi.model.book.BookGender;
 import com.cursojava.libraryapi.model.book.BookModel;
 import com.cursojava.libraryapi.repository.author.AuthorRepository;
-import com.cursojava.libraryapi.support.PostgresTestContainer;
+import com.cursojava.libraryapi.support.IntegrationTestContainer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(AuditingConfiguration.class)
-class BookRepositoryTest extends PostgresTestContainer {
+class BookRepositoryTest extends IntegrationTestContainer {
 
     @Autowired
     private BookRepository bookRepository;

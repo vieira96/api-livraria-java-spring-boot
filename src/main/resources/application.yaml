@@ -7,6 +7,12 @@ spring:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:2s}
+      timeout: ${REDIS_TIMEOUT:2s}
   flyway:
     locations: classpath:db/migration
   jpa:
@@ -32,3 +38,7 @@ security:
     access-expiration: ${JWT_ACCESS_EXPIRATION:15m}
   refresh-token:
     expiration: ${REFRESH_TOKEN_EXPIRATION:7d}
+  login-attempts:
+    enabled: ${LOGIN_ATTEMPTS_ENABLED:true}
+    max-attempts: ${LOGIN_MAX_ATTEMPTS:3}
+    window: ${LOGIN_ATTEMPT_WINDOW:5m}

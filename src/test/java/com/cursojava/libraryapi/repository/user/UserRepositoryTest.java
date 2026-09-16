@@ -2,7 +2,7 @@ package com.cursojava.libraryapi.repository.user;
 
 import com.cursojava.libraryapi.config.AuditingConfiguration;
 import com.cursojava.libraryapi.model.user.UserModel;
-import com.cursojava.libraryapi.support.PostgresTestContainer;
+import com.cursojava.libraryapi.support.IntegrationTestContainer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(AuditingConfiguration.class)
-class UserRepositoryTest extends PostgresTestContainer {
+class UserRepositoryTest extends IntegrationTestContainer {
 
     @Autowired
     private UserRepository userRepository;

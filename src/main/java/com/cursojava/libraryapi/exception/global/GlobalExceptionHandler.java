@@ -5,6 +5,9 @@ import com.cursojava.libraryapi.dto.error.FieldErrorDTO;
 import com.cursojava.libraryapi.exception.auth.InvalidCredentialsException;
 import com.cursojava.libraryapi.exception.auth.InvalidAccessTokenException;
 import com.cursojava.libraryapi.exception.auth.InvalidRefreshTokenException;
+import com.cursojava.libraryapi.exception.auth.TooManyLoginAttemptsException;
+import com.cursojava.libraryapi.exception.auth.LoginProtectionUnavailableException;
+import com.cursojava.libraryapi.dto.error.LoginRateLimitResponseDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpStatus;
@@ -78,6 +81,36 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(TooManyLoginAttemptsException.class)
+    public ResponseEntity<LoginRateLimitResponseDTO> handleTooManyLoginAttempts(
+            TooManyLoginAttemptsException e
+    ) {
+        LoginRateLimitResponseDTO response = new LoginRateLimitResponseDTO(
+                HttpStatus.TOO_MANY_REQUESTS.value(),
+                "Muitas tentativas de login. Tente novamente em " + e.getRetryAfterSeconds() + " segundos.",
+                e.getRetryAfterSeconds()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", Long.toString(e.getRetryAfterSeconds()))
+                .body(response);
+    }
+
+    @ExceptionHandler(LoginProtectionUnavailableException.class)
+    public ResponseEntity<ErrorResponseDTO> handleLoginProtectionUnavailable(
+            LoginProtectionUnavailableException e
+    ) {
+        log.error("Proteção de login indisponível", e);
+        ErrorResponseDTO response = new ErrorResponseDTO(
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                e.getMessage(),
+                List.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)

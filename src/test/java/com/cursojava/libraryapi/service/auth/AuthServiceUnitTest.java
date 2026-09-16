@@ -5,6 +5,7 @@ import com.cursojava.libraryapi.dto.auth.LoginUserDTO;
 import com.cursojava.libraryapi.dto.auth.RefreshTokenDTO;
 import com.cursojava.libraryapi.dto.auth.RegisterUserDTO;
 import com.cursojava.libraryapi.exception.auth.InvalidCredentialsException;
+import com.cursojava.libraryapi.exception.auth.TooManyLoginAttemptsException;
 import com.cursojava.libraryapi.exception.auth.UserAlreadyExistsException;
 import com.cursojava.libraryapi.model.role.RoleModel;
 import com.cursojava.libraryapi.model.role.RoleName;
@@ -52,6 +53,9 @@ class AuthServiceUnitTest {
 
     @Mock
     private RefreshTokenService refreshTokenService;
+
+    @Mock
+    private LoginAttemptService loginAttemptService;
 
     @InjectMocks
     private AuthService authService;
@@ -132,7 +136,7 @@ class AuthServiceUnitTest {
         when(refreshTokenService.issue(user))
                 .thenReturn(new RefreshTokenService.IssuedRefreshToken("refresh-token"));
 
-        LoginResponseDTO response = authService.login(request);
+        LoginResponseDTO response = authService.login(request, "127.0.0.1");
 
         assertThat(response.accessToken()).isEqualTo("access-token");
         assertThat(response.refreshToken()).isEqualTo("refresh-token");
@@ -142,6 +146,8 @@ class AuthServiceUnitTest {
         verify(passwordEncoder).matches("strong-password", "encoded-password");
         verify(jwtService).generateToken(user);
         verify(refreshTokenService).issue(user);
+        verify(loginAttemptService).consumeAttempt("127.0.0.1");
+        verify(loginAttemptService).releaseSuccessfulAttempt("127.0.0.1");
     }
 
     @Test
@@ -151,7 +157,7 @@ class AuthServiceUnitTest {
         when(passwordEncoder.matches(org.mockito.ArgumentMatchers.eq("strong-password"), any(String.class)))
                 .thenReturn(false);
 
-        assertThatThrownBy(() -> authService.login(request))
+        assertThatThrownBy(() -> authService.login(request, "127.0.0.2"))
                 .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessage("E-mail ou senha inválidos.");
 
@@ -167,11 +173,26 @@ class AuthServiceUnitTest {
         when(userRepository.findByEmailIgnoreCase("maria@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("wrong-password", "encoded-password")).thenReturn(false);
 
-        assertThatThrownBy(() -> authService.login(request))
+        assertThatThrownBy(() -> authService.login(request, "127.0.0.3"))
                 .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessage("E-mail ou senha inválidos.");
 
         verifyNoInteractions(jwtService, refreshTokenService);
+    }
+
+    @Test
+    void shouldRejectLoginBeforeCheckingCredentialsWhenIpAttemptLimitIsExceeded() {
+        LoginUserDTO request = new LoginUserDTO("maria@example.com", "any-password");
+        doThrow(new TooManyLoginAttemptsException(245))
+                .when(loginAttemptService).consumeAttempt("203.0.113.10");
+
+        assertThatThrownBy(() -> authService.login(request, "203.0.113.10"))
+                .isInstanceOf(TooManyLoginAttemptsException.class)
+                .satisfies(exception -> assertThat(
+                        ((TooManyLoginAttemptsException) exception).getRetryAfterSeconds()
+                ).isEqualTo(245));
+
+        verifyNoInteractions(userRepository, passwordEncoder, jwtService, refreshTokenService);
     }
 
     @Test

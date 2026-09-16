@@ -9,6 +9,7 @@ API REST para cadastro e consulta de autores e livros, com cadastro de usuários
 - Spring Data JPA
 - Spring Security Crypto (BCrypt) e OAuth2 JOSE/Nimbus para JWT HS256
 - PostgreSQL 16
+- Redis 7 para limitação de tentativas de login com TTL
 - Flyway
 - Docker Compose
 - Testcontainers
@@ -23,7 +24,7 @@ Você pode preparar o ambiente e subir o projeto com:
 bash run-project.sh
 ```
 
-O script cria o `.env` a partir do `.env.example` quando necessário, valida o Docker e inicia a API com o PostgreSQL em modo Watch. Mantenha o terminal aberto enquanto estiver desenvolvendo; use `Ctrl+C` para encerrar.
+O script cria o `.env` a partir do `.env.example` quando necessário, valida o Docker e inicia a API com PostgreSQL e Redis em modo Watch. Mantenha o terminal aberto enquanto estiver desenvolvendo; use `Ctrl+C` para encerrar.
 
 Se preferir rodar manualmente, crie o arquivo de ambiente a partir do exemplo:
 
@@ -33,13 +34,13 @@ cp .env.example .env
 
 No `.env`, as variáveis `POSTGRES_*` configuram o container do banco e as `DB_*` são usadas pela API para se conectar. Mantenha `POSTGRES_USER` e `DB_USERNAME` iguais, assim como `POSTGRES_PASSWORD` e `DB_PASSWORD`. A `DB_URL` também deve apontar para o banco definido em `POSTGRES_DB`.
 
-Depois suba a API e o banco:
+Depois suba a API, o banco e o Redis:
 
 ```bash
 docker compose --env-file .env -f docker/docker-compose.yml up --build
 ```
 
-Esse comando sobe o PostgreSQL e inicia a API com Maven e Spring Boot DevTools na porta definida por `SERVER_PORT` no `.env` (`8000` se ela não for informada). Não é necessário instalar Java ou Maven na máquina; basta ter Docker ou Docker Desktop.
+Esse comando sobe PostgreSQL e Redis e inicia a API com Maven e Spring Boot DevTools na porta definida por `SERVER_PORT` no `.env` (`8000` se ela não for informada). Não é necessário instalar Java ou Maven na máquina; basta ter Docker ou Docker Desktop.
 
 A porta da API é definida por `SERVER_PORT` no `.env`. Com o valor padrão (`8000`), ela fica disponível em `http://localhost:8000/api`.
 
@@ -173,6 +174,26 @@ Authorization: Bearer JWT_DE_ACESSO
 
 A resposta contém `id`, `name`, `email`, `roles`, `createdAt` e `updatedAt`. A senha nunca é retornada. Requisições sem token, com token inválido ou expirado recebem `401 Unauthorized`.
 
+#### Limitação de tentativas de login
+
+As tentativas são contadas no Redis por uma chave SHA-256 derivada do endereço IP do cliente. O e-mail não participa do bloqueio, evitando que terceiros bloqueiem uma conta apenas por conhecerem seu endereço público. Por padrão, cada IP pode realizar três tentativas dentro de uma janela de cinco minutos. Na quarta tentativa, a API não verifica a senha e responde com `429 Too Many Requests`:
+
+```json
+{
+  "status": 429,
+  "message": "Muitas tentativas de login. Tente novamente em 245 segundos.",
+  "retryAfterSeconds": 245
+}
+```
+
+A resposta também inclui o cabeçalho HTTP `Retry-After`. O TTL começa na primeira tentativa da janela, expira automaticamente no Redis e não é prolongado por novas requisições bloqueadas. Um login válido retira somente a tentativa válida atual do contador; falhas anteriores daquele IP permanecem até o TTL expirar.
+
+O limite pode ser configurado com `LOGIN_MAX_ATTEMPTS` e `LOGIN_ATTEMPT_WINDOW`. A integração pode ser desativada somente em ambientes controlados usando `LOGIN_ATTEMPTS_ENABLED=false`.
+
+O IP é obtido da conexão HTTP (`remoteAddr`); a API não confia diretamente em `X-Forwarded-For`, pois esse cabeçalho pode ser falsificado. Ao publicar a aplicação atrás de Nginx, Traefik ou outro proxy, configure explicitamente o encaminhamento de IP apenas para proxies confiáveis. Sem isso, todos os clientes podem ser identificados pelo IP do proxy.
+
+Se o Redis estiver indisponível, o login responde com `503 Service Unavailable`; a proteção não é ignorada silenciosamente. As demais funcionalidades da API continuam operando normalmente.
+
 Configure `JWT_SECRET` com pelo menos 32 bytes. As durações podem ser alteradas por `JWT_ACCESS_EXPIRATION` e `REFRESH_TOKEN_EXPIRATION` no arquivo `.env`.
 
 Exemplo para criar um autor:
@@ -256,6 +277,6 @@ Para executar somente o teste de integração do cadastro, o Docker deve estar a
 
 ## Postman
 
-A collection está em [postman/Library API.postman_collection.json](postman/Library%20API.postman_collection.json). Importe o arquivo no Postman e ajuste a variável `baseUrl` para `http://localhost:SERVER_PORT/api`, usando o valor definido no seu `.env`.
+A collection está em [postman/Library API.postman_collection.json](postman/Library%20API.postman_collection.json). Ela usa diretamente `http://localhost:8000/api`; se alterar `SERVER_PORT`, edite as URLs das requisições.
 
-A pasta `Authentication` contém requisições para cadastro, login, renovação, consulta do usuário autenticado, credenciais incorretas, e-mail duplicado e dados inválidos. Execute-as na ordem: o cadastro salva `registrationEmail`, o login salva `accessToken` e `refreshToken`, a renovação rotaciona e atualiza os dois tokens, e `/me` utiliza automaticamente o Bearer token salvo.
+A pasta `Authentication` contém requisições para cadastro, login, renovação, consulta do usuário autenticado, credenciais incorretas, e-mail duplicado e dados inválidos. A collection não cria nem atualiza variáveis automaticamente: digite os dados nos corpos e cole manualmente access token, refresh token e UUIDs nos campos indicados.

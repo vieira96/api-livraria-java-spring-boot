@@ -10,6 +10,7 @@ import com.cursojava.libraryapi.model.user.UserModel;
 import com.cursojava.libraryapi.service.auth.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -39,8 +40,11 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginUserDTO request) {
-        return ResponseEntity.ok(authService.login(request));
+    public ResponseEntity<LoginResponseDTO> login(
+            @Valid @RequestBody LoginUserDTO request,
+            HttpServletRequest httpRequest
+    ) {
+        return ResponseEntity.ok(authService.login(request, httpRequest.getRemoteAddr()));
     }
 
     @PostMapping("/refresh")

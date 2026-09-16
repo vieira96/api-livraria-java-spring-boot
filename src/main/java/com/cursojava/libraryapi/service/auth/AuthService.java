@@ -38,6 +38,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final LoginAttemptService loginAttemptService;
 
     @Transactional
     public UserModel register(RegisterUserDTO request) {
@@ -61,8 +62,9 @@ public class AuthService {
     }
 
     @Transactional
-    public LoginResponseDTO login(LoginUserDTO request) {
+    public LoginResponseDTO login(LoginUserDTO request, String clientIp) {
         String normalizedEmail = request.email().trim().toLowerCase(Locale.ROOT);
+        loginAttemptService.consumeAttempt(clientIp);
         var foundUser = userRepository.findByEmailIgnoreCase(normalizedEmail);
         String passwordHash = foundUser.map(UserModel::getPassword).orElse(DUMMY_PASSWORD_HASH);
         boolean passwordMatches = passwordEncoder.matches(request.password(), passwordHash);
@@ -72,6 +74,7 @@ public class AuthService {
         }
 
         UserModel user = foundUser.get();
+        loginAttemptService.releaseSuccessfulAttempt(clientIp);
         String refreshToken = refreshTokenService.issue(user).value();
 
         return createTokenResponse(user, refreshToken);

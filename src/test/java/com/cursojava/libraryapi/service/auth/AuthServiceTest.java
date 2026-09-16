@@ -13,7 +13,7 @@ import com.cursojava.libraryapi.model.user.UserModel;
 import com.cursojava.libraryapi.repository.role.RoleRepository;
 import com.cursojava.libraryapi.repository.auth.RefreshTokenRepository;
 import com.cursojava.libraryapi.repository.user.UserRepository;
-import com.cursojava.libraryapi.support.PostgresTestContainer;
+import com.cursojava.libraryapi.support.IntegrationTestContainer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @Transactional
-class AuthServiceTest extends PostgresTestContainer {
+class AuthServiceTest extends IntegrationTestContainer {
 
     @Autowired
     private AuthService authService;
@@ -101,7 +101,7 @@ class AuthServiceTest extends PostgresTestContainer {
         LoginResponseDTO response = authService.login(new LoginUserDTO(
                 "  MARIA.SILVA@EXAMPLE.COM  ",
                 "strong-password"
-        ));
+        ), "127.0.0.1");
 
         assertThat(response.accessToken().split("\\.")).hasSize(3);
         assertThat(response.refreshToken()).isNotBlank();
@@ -123,7 +123,7 @@ class AuthServiceTest extends PostgresTestContainer {
         assertThatThrownBy(() -> authService.login(new LoginUserDTO(
                 "maria.silva@example.com",
                 "wrong-password"
-        )))
+        ), "127.0.0.1"))
                 .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessage("E-mail ou senha inválidos.");
     }
@@ -138,7 +138,7 @@ class AuthServiceTest extends PostgresTestContainer {
         LoginResponseDTO login = authService.login(new LoginUserDTO(
                 "maria.silva@example.com",
                 "strong-password"
-        ));
+        ), "127.0.0.1");
 
         LoginResponseDTO refreshed = authService.refresh(new RefreshTokenDTO(login.refreshToken()));
 

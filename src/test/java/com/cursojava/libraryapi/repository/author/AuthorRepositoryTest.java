@@ -2,7 +2,7 @@ package com.cursojava.libraryapi.repository.author;
 
 import com.cursojava.libraryapi.config.AuditingConfiguration;
 import com.cursojava.libraryapi.model.author.AuthorModel;
-import com.cursojava.libraryapi.support.PostgresTestContainer;
+import com.cursojava.libraryapi.support.IntegrationTestContainer;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(AuditingConfiguration.class)
-class AuthorRepositoryTest extends PostgresTestContainer {
+class AuthorRepositoryTest extends IntegrationTestContainer {
 
     @Autowired
     private AuthorRepository authorRepository;

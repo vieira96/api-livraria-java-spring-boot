@@ -26,7 +26,7 @@ if ! [[ "$server_port" =~ ^[0-9]+$ ]]; then
     exit 1
 fi
 
-echo "Construindo e iniciando a API e o PostgreSQL..."
+echo "Construindo e iniciando a API, o PostgreSQL e o Redis..."
 echo
 echo "Projeto pronto em http://localhost:${server_port}"
 echo "Documentação: http://localhost:${server_port}/scalar"
