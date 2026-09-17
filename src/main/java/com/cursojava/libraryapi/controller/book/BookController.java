@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -24,6 +25,7 @@ public class BookController {
     private final BookService bookService;
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BookResponseDTO> createBook(@Valid @RequestBody CreateBookDTO request) {
         BookModel bookModel = bookService.createBook(request);
         return ResponseEntity
@@ -51,6 +53,7 @@ public class BookController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BookResponseDTO> updateBook(
             @PathVariable("id") UUID bookId,
             @Valid @RequestBody CreateBookDTO request
@@ -63,6 +66,7 @@ public class BookController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteBook(@PathVariable("id") UUID bookId) {
         bookService.deleteBook(bookId);
         return ResponseEntity.noContent().build();
