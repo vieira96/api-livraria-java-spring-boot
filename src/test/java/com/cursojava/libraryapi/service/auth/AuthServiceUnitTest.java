@@ -1,8 +1,6 @@
 package com.cursojava.libraryapi.service.auth;
 
-import com.cursojava.libraryapi.dto.auth.LoginResponseDTO;
 import com.cursojava.libraryapi.dto.auth.LoginUserDTO;
-import com.cursojava.libraryapi.dto.auth.RefreshTokenDTO;
 import com.cursojava.libraryapi.dto.auth.RegisterUserDTO;
 import com.cursojava.libraryapi.exception.auth.InvalidCredentialsException;
 import com.cursojava.libraryapi.exception.auth.TooManyLoginAttemptsException;
@@ -65,6 +63,7 @@ class AuthServiceUnitTest {
         RegisterUserDTO request = new RegisterUserDTO(
                 "  Maria Silva  ",
                 "  MARIA.SILVA@example.com  ",
+                "strong-password",
                 "strong-password"
         );
         RoleModel userRole = createUserRole();
@@ -94,6 +93,7 @@ class AuthServiceUnitTest {
         RegisterUserDTO request = new RegisterUserDTO(
                 "Maria Silva",
                 "MARIA.SILVA@example.com",
+                "strong-password",
                 "strong-password"
         );
         doThrow(new UserAlreadyExistsException())
@@ -111,6 +111,7 @@ class AuthServiceUnitTest {
         RegisterUserDTO request = new RegisterUserDTO(
                 "Maria Silva",
                 "maria.silva@example.com",
+                "strong-password",
                 "strong-password"
         );
         when(passwordEncoder.encode(request.password())).thenReturn("encoded-password");
@@ -136,10 +137,11 @@ class AuthServiceUnitTest {
         when(refreshTokenService.issue(user))
                 .thenReturn(new RefreshTokenService.IssuedRefreshToken("refresh-token"));
 
-        LoginResponseDTO response = authService.login(request, "127.0.0.1");
+        AuthSession session = authService.login(request, "127.0.0.1");
+        var response = session.response();
 
         assertThat(response.accessToken()).isEqualTo("access-token");
-        assertThat(response.refreshToken()).isEqualTo("refresh-token");
+        assertThat(session.refreshToken()).isEqualTo("refresh-token");
         assertThat(response.tokenType()).isEqualTo("Bearer");
         assertThat(response.expiresIn()).isEqualTo(900L);
         verify(userRepository).findByEmailIgnoreCase("maria.silva@example.com");
@@ -203,10 +205,11 @@ class AuthServiceUnitTest {
         when(jwtService.generateToken(user)).thenReturn("new-access-token");
         when(jwtService.getExpirationSeconds()).thenReturn(900L);
 
-        LoginResponseDTO response = authService.refresh(new RefreshTokenDTO("current-refresh-token"));
+        AuthSession session = authService.refresh("current-refresh-token");
+        var response = session.response();
 
         assertThat(response.accessToken()).isEqualTo("new-access-token");
-        assertThat(response.refreshToken()).isEqualTo("new-refresh-token");
+        assertThat(session.refreshToken()).isEqualTo("new-refresh-token");
         assertThat(response.tokenType()).isEqualTo("Bearer");
         assertThat(response.expiresIn()).isEqualTo(900L);
     }

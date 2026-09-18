@@ -16,5 +16,8 @@ public record RegisterUserDTO(
 
         @NotBlank(message = "Senha é obrigatória")
         @Size(min = 8, max = 72, message = "Senha deve ter entre {min} e {max} caracteres")
-        String password
+        String password,
+
+        @NotBlank(message = "Confirmação de senha é obrigatória")
+        String confirmPassword
 ) {}

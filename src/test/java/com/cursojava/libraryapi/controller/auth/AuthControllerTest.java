@@ -58,12 +58,13 @@ class AuthControllerTest extends IntegrationTestContainer {
         var registeredUser = authService.register(new RegisterUserDTO(
                 "Maria Silva",
                 email,
+                "strong-password",
                 "strong-password"
         ));
         createdUserId = registeredUser.getId();
         var login = authService.login(new LoginUserDTO(email, "strong-password"), "127.0.0.1");
 
-        HttpResponse<String> response = getMe(login.accessToken());
+        HttpResponse<String> response = getMe(login.response().accessToken());
 
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body())

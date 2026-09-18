@@ -1,8 +1,6 @@
 package com.cursojava.libraryapi.service.auth;
 
-import com.cursojava.libraryapi.dto.auth.LoginResponseDTO;
 import com.cursojava.libraryapi.dto.auth.LoginUserDTO;
-import com.cursojava.libraryapi.dto.auth.RefreshTokenDTO;
 import com.cursojava.libraryapi.dto.auth.RegisterUserDTO;
 import com.cursojava.libraryapi.exception.auth.InvalidCredentialsException;
 import com.cursojava.libraryapi.exception.auth.InvalidRefreshTokenException;
@@ -47,6 +45,7 @@ class AuthServiceTest extends IntegrationTestContainer {
         RegisterUserDTO request = new RegisterUserDTO(
                 "  Maria Silva  ",
                 "  MARIA.SILVA@example.com  ",
+                "strong-password",
                 "strong-password"
         );
 
@@ -76,12 +75,14 @@ class AuthServiceTest extends IntegrationTestContainer {
         authService.register(new RegisterUserDTO(
                 "Maria Silva",
                 "maria.silva@example.com",
+                "strong-password",
                 "strong-password"
         ));
 
         RegisterUserDTO duplicate = new RegisterUserDTO(
                 "Outra Maria",
                 "MARIA.SILVA@EXAMPLE.COM",
+                "another-password",
                 "another-password"
         );
 
@@ -95,21 +96,23 @@ class AuthServiceTest extends IntegrationTestContainer {
         authService.register(new RegisterUserDTO(
                 "Maria Silva",
                 "maria.silva@example.com",
+                "strong-password",
                 "strong-password"
         ));
 
-        LoginResponseDTO response = authService.login(new LoginUserDTO(
+        AuthSession session = authService.login(new LoginUserDTO(
                 "  MARIA.SILVA@EXAMPLE.COM  ",
                 "strong-password"
         ), "127.0.0.1");
+        var response = session.response();
 
         assertThat(response.accessToken().split("\\.")).hasSize(3);
-        assertThat(response.refreshToken()).isNotBlank();
+        assertThat(session.refreshToken()).isNotBlank();
         assertThat(response.tokenType()).isEqualTo("Bearer");
         assertThat(response.expiresIn()).isEqualTo(900L);
         assertThat(refreshTokenRepository.findAll())
                 .singleElement()
-                .satisfies(token -> assertThat(token.getTokenHash()).doesNotContain(response.refreshToken()));
+                .satisfies(token -> assertThat(token.getTokenHash()).doesNotContain(session.refreshToken()));
     }
 
     @Test
@@ -117,6 +120,7 @@ class AuthServiceTest extends IntegrationTestContainer {
         authService.register(new RegisterUserDTO(
                 "Maria Silva",
                 "maria.silva@example.com",
+                "strong-password",
                 "strong-password"
         ));
 
@@ -133,22 +137,23 @@ class AuthServiceTest extends IntegrationTestContainer {
         authService.register(new RegisterUserDTO(
                 "Maria Silva",
                 "maria.silva@example.com",
+                "strong-password",
                 "strong-password"
         ));
-        LoginResponseDTO login = authService.login(new LoginUserDTO(
+        AuthSession login = authService.login(new LoginUserDTO(
                 "maria.silva@example.com",
                 "strong-password"
         ), "127.0.0.1");
 
-        LoginResponseDTO refreshed = authService.refresh(new RefreshTokenDTO(login.refreshToken()));
+        AuthSession refreshed = authService.refresh(login.refreshToken());
 
-        assertThat(refreshed.accessToken()).isNotEqualTo(login.accessToken());
+        assertThat(refreshed.response().accessToken()).isNotEqualTo(login.response().accessToken());
         assertThat(refreshed.refreshToken()).isNotEqualTo(login.refreshToken());
-        assertThat(refreshed.expiresIn()).isEqualTo(900L);
-        assertThatThrownBy(() -> authService.refresh(new RefreshTokenDTO(login.refreshToken())))
+        assertThat(refreshed.response().expiresIn()).isEqualTo(900L);
+        assertThatThrownBy(() -> authService.refresh(login.refreshToken()))
                 .isInstanceOf(InvalidRefreshTokenException.class)
                 .hasMessage("Refresh token inválido ou expirado.");
-        assertThatThrownBy(() -> authService.refresh(new RefreshTokenDTO(refreshed.refreshToken())))
+        assertThatThrownBy(() -> authService.refresh(refreshed.refreshToken()))
                 .isInstanceOf(InvalidRefreshTokenException.class)
                 .hasMessage("Refresh token inválido ou expirado.");
     }

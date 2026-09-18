@@ -2,7 +2,6 @@ package com.cursojava.libraryapi.service.auth;
 
 import com.cursojava.libraryapi.dto.auth.LoginResponseDTO;
 import com.cursojava.libraryapi.dto.auth.LoginUserDTO;
-import com.cursojava.libraryapi.dto.auth.RefreshTokenDTO;
 import com.cursojava.libraryapi.dto.auth.RegisterUserDTO;
 import com.cursojava.libraryapi.dto.auth.RegisteredUserResponseDTO;
 import com.cursojava.libraryapi.exception.auth.InvalidAccessTokenException;
@@ -43,6 +42,7 @@ public class AuthService {
     @Transactional
     public UserModel register(RegisterUserDTO request) {
         String normalizedEmail = request.email().trim().toLowerCase(Locale.ROOT);
+        authValidator.validatePasswordMatch(request.password(), request.confirmPassword());
         authValidator.validateRegistration(normalizedEmail);
 
         UserModel user = new UserModel();
@@ -62,7 +62,7 @@ public class AuthService {
     }
 
     @Transactional
-    public LoginResponseDTO login(LoginUserDTO request, String clientIp) {
+    public AuthSession login(LoginUserDTO request, String clientIp) {
         String normalizedEmail = request.email().trim().toLowerCase(Locale.ROOT);
         loginAttemptService.consumeAttempt(clientIp);
         var foundUser = userRepository.findByEmailIgnoreCase(normalizedEmail);
@@ -77,14 +77,18 @@ public class AuthService {
         loginAttemptService.releaseSuccessfulAttempt(clientIp);
         String refreshToken = refreshTokenService.issue(user).value();
 
-        return createTokenResponse(user, refreshToken);
+        return createSession(user, refreshToken);
     }
 
     @Transactional(dontRollbackOn = InvalidRefreshTokenException.class)
-    public LoginResponseDTO refresh(RefreshTokenDTO request) {
-        RefreshTokenService.RotatedRefreshToken rotatedToken = refreshTokenService.rotate(request.refreshToken());
+    public AuthSession refresh(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new InvalidRefreshTokenException();
+        }
 
-        return createTokenResponse(rotatedToken.user(), rotatedToken.value());
+        RefreshTokenService.RotatedRefreshToken rotatedToken = refreshTokenService.rotate(refreshToken);
+
+        return createSession(rotatedToken.user(), rotatedToken.value());
     }
 
     @Transactional
@@ -102,12 +106,19 @@ public class AuthService {
         return AuthMapper.toRegisteredUserResponseDTO(user);
     }
 
-    private LoginResponseDTO createTokenResponse(UserModel user, String refreshToken) {
-        return new LoginResponseDTO(
+    @Transactional
+    public void logout(String refreshToken) {
+        refreshTokenService.revoke(refreshToken);
+    }
+
+    private AuthSession createSession(UserModel user, String refreshToken) {
+        LoginResponseDTO response = new LoginResponseDTO(
                 jwtService.generateToken(user),
-                refreshToken,
                 "Bearer",
-                jwtService.getExpirationSeconds()
+                jwtService.getExpirationSeconds(),
+                AuthMapper.toRegisteredUserResponseDTO(user)
         );
+
+        return new AuthSession(response, refreshToken);
     }
 }

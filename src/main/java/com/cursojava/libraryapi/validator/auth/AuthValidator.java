@@ -1,5 +1,6 @@
 package com.cursojava.libraryapi.validator.auth;
 
+import com.cursojava.libraryapi.exception.auth.PasswordsDoNotMatchException;
 import com.cursojava.libraryapi.exception.auth.UserAlreadyExistsException;
 import com.cursojava.libraryapi.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,12 @@ public class AuthValidator {
     public void validateRegistration(String email) {
         if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new UserAlreadyExistsException();
+        }
+    }
+
+    public void validatePasswordMatch(String password, String confirmPassword) {
+        if (!password.equals(confirmPassword)) {
+            throw new PasswordsDoNotMatchException();
         }
     }
 }

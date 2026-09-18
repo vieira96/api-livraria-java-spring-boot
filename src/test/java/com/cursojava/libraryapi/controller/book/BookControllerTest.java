@@ -49,19 +49,19 @@ class BookControllerTest extends IntegrationTestContainer {
     @BeforeEach
     void setUp() {
         String email = "book-test." + UUID.randomUUID() + "@example.com";
-        UserModel user = authService.register(new RegisterUserDTO("Maria Silva", email, "strong-password"));
+        UserModel user = authService.register(new RegisterUserDTO("Maria Silva", email, "strong-password", "strong-password"));
         createdUserId = user.getId();
         var login = authService.login(new LoginUserDTO(email, "strong-password"), "127.0.0.1");
-        userToken = login.accessToken();
+        userToken = login.response().accessToken();
 
         String adminEmail = "admin-book-test." + UUID.randomUUID() + "@example.com";
-        UserModel admin = authService.register(new RegisterUserDTO("Admin User", adminEmail, "strong-password"));
+        UserModel admin = authService.register(new RegisterUserDTO("Admin User", adminEmail, "strong-password", "strong-password"));
         adminUserId = admin.getId();
         RoleModel adminRole = roleRepository.findByName(RoleName.ADMIN).orElseThrow();
         admin.getRoles().add(adminRole);
         userRepository.save(admin);
         var adminLogin = authService.login(new LoginUserDTO(adminEmail, "strong-password"), "127.0.0.1");
-        adminToken = adminLogin.accessToken();
+        adminToken = adminLogin.response().accessToken();
     }
 
     @AfterEach

@@ -63,6 +63,15 @@ public class RefreshTokenService {
         return new RotatedRefreshToken(currentToken.getUser(), newToken.value());
     }
 
+    public void revoke(String rawToken) {
+        if (rawToken == null || rawToken.isBlank()) {
+            return;
+        }
+
+        refreshTokenRepository.findForUpdateByTokenHash(hash(rawToken))
+                .ifPresent(token -> refreshTokenRepository.revokeActiveFamily(token.getFamilyId(), Instant.now()));
+    }
+
     private IssuedRefreshToken issue(UserModel user, UUID familyId) {
         byte[] randomBytes = new byte[32];
         SECURE_RANDOM.nextBytes(randomBytes);
@@ -85,6 +94,10 @@ public class RefreshTokenService {
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 não está disponível.", exception);
         }
+    }
+
+    public void revokeAllForUser(UserModel user) {
+        refreshTokenRepository.deleteAllByUser_Id(user.getId());
     }
 
     public record IssuedRefreshToken(String value) {}
