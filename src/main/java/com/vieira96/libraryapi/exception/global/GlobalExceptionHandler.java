@@ -1,0 +1,209 @@
+package com.vieira96.libraryapi.exception.global;
+
+import com.vieira96.libraryapi.dto.error.ErrorResponseDTO;
+import com.vieira96.libraryapi.dto.error.FieldErrorDTO;
+import com.vieira96.libraryapi.exception.auth.InvalidCredentialsException;
+import com.vieira96.libraryapi.exception.auth.InvalidAccessTokenException;
+import com.vieira96.libraryapi.exception.auth.InvalidRefreshTokenException;
+import com.vieira96.libraryapi.exception.auth.TooManyLoginAttemptsException;
+import com.vieira96.libraryapi.exception.auth.LoginProtectionUnavailableException;
+import com.vieira96.libraryapi.dto.error.LoginRateLimitResponseDTO;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import tools.jackson.databind.exc.InvalidFormatException;
+
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+
+@RestControllerAdvice
+@Slf4j
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponseDTO> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
+        List<FieldError> fieldErrors = e.getFieldErrors();
+        //mapeia os fieldErros para uma lista de DTO de erro
+        List<FieldErrorDTO> errorList = fieldErrors
+                .stream()
+                .map(fe -> new FieldErrorDTO(fe.getField(), fe.getDefaultMessage())).toList();
+
+        ErrorResponseDTO response =  new ErrorResponseDTO(
+                HttpStatus.UNPROCESSABLE_CONTENT.value(),
+                "Erro de validação",
+                errorList
+        );
+
+        return ResponseEntity
+                .unprocessableContent()
+                .body(response);
+    }
+
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ErrorResponseDTO> handleNotFoundException(NotFoundException e) {
+        ErrorResponseDTO response = new ErrorResponseDTO(
+                HttpStatus.NOT_FOUND.value(),
+                e.getMessage(),
+                List.of()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(response);
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponseDTO> handleConflictException(ConflictException e) {
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ErrorResponseDTO.conflict(e.getMessage()));
+    }
+
+    @ExceptionHandler({
+            InvalidCredentialsException.class,
+            InvalidRefreshTokenException.class,
+            InvalidAccessTokenException.class
+    })
+    public ResponseEntity<ErrorResponseDTO> handleAuthenticationException(RuntimeException e) {
+        ErrorResponseDTO response = new ErrorResponseDTO(
+                HttpStatus.UNAUTHORIZED.value(),
+                e.getMessage(),
+                List.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(TooManyLoginAttemptsException.class)
+    public ResponseEntity<LoginRateLimitResponseDTO> handleTooManyLoginAttempts(
+            TooManyLoginAttemptsException e
+    ) {
+        LoginRateLimitResponseDTO response = new LoginRateLimitResponseDTO(
+                HttpStatus.TOO_MANY_REQUESTS.value(),
+                "Muitas tentativas de login. Tente novamente em " + e.getRetryAfterSeconds() + " segundos.",
+                e.getRetryAfterSeconds()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", Long.toString(e.getRetryAfterSeconds()))
+                .body(response);
+    }
+
+    @ExceptionHandler(LoginProtectionUnavailableException.class)
+    public ResponseEntity<ErrorResponseDTO> handleLoginProtectionUnavailable(
+            LoginProtectionUnavailableException e
+    ) {
+        log.error("Proteção de login indisponível", e);
+        ErrorResponseDTO response = new ErrorResponseDTO(
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                e.getMessage(),
+                List.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponseDTO> handleAccessDeniedException(AccessDeniedException e) {
+        ErrorResponseDTO response = new ErrorResponseDTO(
+                HttpStatus.FORBIDDEN.value(),
+                "Acesso negado.",
+                List.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponseDTO> handleHttpMessageNotReadableException(
+            HttpMessageNotReadableException e
+    ) {
+        Throwable cause = e.getCause();
+
+        if (cause instanceof InvalidFormatException invalidFormatException) {
+            return ResponseEntity.badRequest().body(getResponse(invalidFormatException));
+        }
+
+        ErrorResponseDTO response = new ErrorResponseDTO(
+                HttpStatus.BAD_REQUEST.value(),
+                "Corpo da requisição inválido.",
+                List.of()
+        );
+
+        return ResponseEntity
+                .badRequest()
+                .body(response);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponseDTO> handleMethodArgumentTypeMismatchException(
+            MethodArgumentTypeMismatchException e
+    ) {
+        String error = UUID.class.equals(e.getRequiredType())
+                ? "Informe um UUID válido."
+                : "Valor inválido.";
+
+        ErrorResponseDTO response = new ErrorResponseDTO(
+                HttpStatus.BAD_REQUEST.value(),
+                "Parâmetro da requisição inválido.",
+                List.of(new FieldErrorDTO(e.getName(), error))
+        );
+
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponseDTO> handleInternalServerError(Exception e) {
+        log.error("Erro interno não tratado", e);
+
+        ErrorResponseDTO response = new ErrorResponseDTO(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Ocorreu um erro interno. Tente novamente mais tarde.",
+                List.of()
+        );
+
+        return ResponseEntity
+                .internalServerError()
+                .body(response);
+    }
+
+    private static @NonNull ErrorResponseDTO getResponse(InvalidFormatException invalidFormatException) {
+        String field = invalidFormatException.getPath().isEmpty()
+                ? "body"
+                : invalidFormatException.getPath().getLast().getPropertyName();
+
+        Class<?> targetType = invalidFormatException.getTargetType();
+        String error;
+
+        if (LocalDate.class.equals(targetType)) {
+            error = "Data inválida. Use o formato yyyy-MM-dd.";
+        } else if (targetType.isEnum()) {
+            String acceptedValues = Arrays.stream(targetType.getEnumConstants())
+                    .map(Object::toString)
+                    .reduce((first, second) -> first + ", " + second)
+                    .orElse("");
+
+            error = "Valor inválido. Valores aceitos: " + acceptedValues + ".";
+        } else {
+            error = "Valor inválido.";
+        }
+
+        ErrorResponseDTO response = new ErrorResponseDTO(
+                HttpStatus.BAD_REQUEST.value(),
+                "Corpo da requisição inválido.",
+                List.of(new FieldErrorDTO(field, error))
+        );
+        return response;
+    }
+}
