@@ -1,11 +1,17 @@
 package com.vieira96.libraryapi.controller.book;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vieira96.libraryapi.dto.auth.LoginUserDTO;
 import com.vieira96.libraryapi.dto.auth.RegisterUserDTO;
+import com.vieira96.libraryapi.model.author.AuthorModel;
+import com.vieira96.libraryapi.model.book.BookGender;
+import com.vieira96.libraryapi.model.book.BookModel;
 import com.vieira96.libraryapi.model.role.RoleModel;
 import com.vieira96.libraryapi.model.role.RoleName;
 import com.vieira96.libraryapi.model.user.UserModel;
 import com.vieira96.libraryapi.repository.auth.RefreshTokenRepository;
+import com.vieira96.libraryapi.repository.author.AuthorRepository;
+import com.vieira96.libraryapi.repository.book.BookRepository;
 import com.vieira96.libraryapi.repository.role.RoleRepository;
 import com.vieira96.libraryapi.repository.user.UserRepository;
 import com.vieira96.libraryapi.service.auth.AuthService;
@@ -21,6 +27,8 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,8 +51,19 @@ class BookControllerTest extends IntegrationTestContainer {
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
 
+    @Autowired
+    private AuthorRepository authorRepository;
+
+    @Autowired
+    private BookRepository bookRepository;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
     private UUID createdUserId;
     private UUID adminUserId;
+    private UUID createdAuthorId;
+    private UUID createdBookId;
 
     @BeforeEach
     void setUp() {
@@ -66,6 +85,12 @@ class BookControllerTest extends IntegrationTestContainer {
 
     @AfterEach
     void cleanUpCreatedUser() {
+        if (createdBookId != null) {
+            bookRepository.deleteById(createdBookId);
+        }
+        if (createdAuthorId != null) {
+            authorRepository.deleteById(createdAuthorId);
+        }
         if (adminUserId != null) {
             refreshTokenRepository.deleteAllByUser_Id(adminUserId);
             userRepository.deleteById(adminUserId);
@@ -110,9 +135,11 @@ class BookControllerTest extends IntegrationTestContainer {
 
     @Test
     void shouldAllowUserToGetBook() throws Exception {
-        HttpResponse<String> response = sendGet("/api/books/" + UUID.randomUUID(), userToken);
+        BookModel book = createBook(createAuthor());
+        HttpResponse<String> response = sendGet("/api/books/" + book.getId(), userToken);
 
-        assertThat(response.statusCode()).isIn(200, 404);
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).contains(book.getTitle());
     }
 
     @Test
@@ -125,10 +152,13 @@ class BookControllerTest extends IntegrationTestContainer {
 
     @Test
     void shouldAllowAdminToCreateBook() throws Exception {
+        AuthorModel author = createAuthor();
         HttpResponse<String> response = sendPost("/api/books", adminToken,
-                "{\"title\":\"O Cortiço\",\"isbn\":\"978-85-7326-109-7\",\"publishDate\":\"1890-03-15\",\"gender\":\"ROMANCE\",\"price\":49.90,\"authorId\":\"" + UUID.randomUUID() + "\"}");
+                "{\"title\":\"O Cortiço\",\"isbn\":\"978-85-7326-109-7\",\"publishDate\":\"1890-03-15\",\"gender\":\"ROMANCE\",\"price\":49.90,\"authorId\":\"" + author.getId() + "\"}");
 
-        assertThat(response.statusCode()).isNotEqualTo(403);
+        assertThat(response.statusCode()).isEqualTo(201);
+        assertThat(response.body()).contains("O Cortiço");
+        createdBookId = UUID.fromString(objectMapper.readTree(response.body()).get("id").asText());
     }
 
     @Test
@@ -144,6 +174,31 @@ class BookControllerTest extends IntegrationTestContainer {
         HttpResponse<String> response = sendDelete("/api/books/" + UUID.randomUUID(), userToken);
 
         assertThat(response.statusCode()).isEqualTo(403);
+    }
+
+    private AuthorModel createAuthor() {
+        AuthorModel author = new AuthorModel();
+        author.setName("Author " + UUID.randomUUID());
+        author.setBirthdate(LocalDate.of(1839, 6, 21));
+        author.setNationality("Brasileira");
+
+        AuthorModel savedAuthor = authorRepository.save(author);
+        createdAuthorId = savedAuthor.getId();
+        return savedAuthor;
+    }
+
+    private BookModel createBook(AuthorModel author) {
+        BookModel book = new BookModel();
+        book.setTitle("Book " + UUID.randomUUID());
+        book.setIsbn("isbn-" + UUID.randomUUID());
+        book.setPublishDate(LocalDate.of(1890, 3, 15));
+        book.setGender(BookGender.ROMANCE);
+        book.setPrice(new BigDecimal("49.90"));
+        book.setAuthor(author);
+
+        BookModel savedBook = bookRepository.save(book);
+        createdBookId = savedBook.getId();
+        return savedBook;
     }
 
     private HttpResponse<String> sendGet(String path, String token) throws Exception {

@@ -83,8 +83,9 @@ http://localhost:8000/v3/api-docs
 | Método | Rota | Descrição |
 | --- | --- | --- |
 | `POST` | `/auth/register` | Cadastra um usuário |
-| `POST` | `/auth/login` | Autentica um usuário e retorna um JWT |
-| `POST` | `/auth/refresh` | Rotaciona o refresh token e retorna um novo par de tokens |
+| `POST` | `/auth/login` | Autentica um usuário, retorna um access token e define o cookie de refresh |
+| `POST` | `/auth/refresh` | Rotaciona o refresh token recebido por cookie e retorna um novo access token |
+| `POST` | `/auth/logout` | Revoga a sessão atual e remove o cookie de refresh |
 | `GET` | `/auth/me` | Retorna os dados do usuário autenticado |
 | `POST` | `/authors` | Cria um autor |
 | `GET` | `/authors` | Lista autores com filtros e paginação |
@@ -141,29 +142,47 @@ Content-Type: application/json
 }
 ```
 
-Em caso de sucesso, a API responde com `200 OK`:
+Em caso de sucesso, a API responde com `200 OK`, devolve o access token no corpo e define o refresh token no cabeçalho `Set-Cookie`:
+
+```http
+Set-Cookie: __Host-refresh_token=REFRESH_TOKEN_OPACO; Path=/; Max-Age=604800; Secure; HttpOnly; SameSite=Strict
+```
 
 ```json
 {
   "accessToken": "JWT_DE_ACESSO",
-  "refreshToken": "REFRESH_TOKEN_OPACO",
   "tokenType": "Bearer",
-  "expiresIn": 900
+  "expiresIn": 900,
+  "user": {
+    "id": "UUID_DO_USUARIO",
+    "name": "Maria Silva",
+    "email": "maria@example.com",
+    "roles": ["USER"],
+    "createdAt": "2026-09-14T19:35",
+    "updatedAt": "2026-09-14T19:35"
+  }
 }
 ```
 
-O access token expira em 15 minutos. O refresh token expira em 7 dias, é persistido somente como hash SHA-256 e é substituído a cada renovação. Para renovar os tokens:
+O access token expira em 15 minutos. O refresh token expira em 7 dias, é persistido somente como hash SHA-256 e não é exposto no JSON. O cookie usa os atributos `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/` e o prefixo `__Host-`, reduzindo a exposição do token a scripts do navegador.
+
+Para renovar os tokens, não envie corpo nem inclua o refresh token manualmente. O navegador envia o cookie automaticamente; em clientes HTTP, preserve o cookie entre as requisições:
 
 ```http
 POST /api/auth/refresh
-Content-Type: application/json
-
-{
-  "refreshToken": "REFRESH_TOKEN_RECEBIDO_NO_LOGIN"
-}
+Cookie: __Host-refresh_token=REFRESH_TOKEN_OPACO
 ```
 
-O refresh token enviado é revogado e a resposta contém um novo par de tokens. Tokens inválidos ou expirados retornam `401 Unauthorized`. A reutilização de um token já rotacionado é tratada como possível replay e revoga toda a família ativa de refresh tokens daquela sessão.
+A resposta contém um novo access token e substitui o cookie por um novo refresh token. O refresh token anterior é revogado. Tokens inválidos ou expirados retornam `401 Unauthorized`. A reutilização de um token já rotacionado é tratada como possível replay e revoga toda a família ativa de refresh tokens daquela sessão.
+
+Para encerrar a sessão, envie:
+
+```http
+POST /api/auth/logout
+Cookie: __Host-refresh_token=REFRESH_TOKEN_OPACO
+```
+
+A API responde com `204 No Content`, revoga o refresh token da sessão e devolve o mesmo cookie com `Max-Age=0` para removê-lo no cliente.
 
 Para consultar o usuário autenticado, envie o access token no cabeçalho Bearer:
 
@@ -279,4 +298,4 @@ Para executar somente o teste de integração do cadastro, o Docker deve estar a
 
 A collection está em [postman/Library API.postman_collection.json](postman/Library%20API.postman_collection.json). Ela usa diretamente `http://localhost:8000/api`; se alterar `SERVER_PORT`, edite as URLs das requisições.
 
-A pasta `Authentication` contém requisições para cadastro, login, renovação, consulta do usuário autenticado, credenciais incorretas, e-mail duplicado e dados inválidos. A collection não cria nem atualiza variáveis automaticamente: digite os dados nos corpos e cole manualmente access token, refresh token e UUIDs nos campos indicados.
+A pasta `Authentication` contém requisições para cadastro, login, renovação, consulta do usuário autenticado, credenciais incorretas, e-mail duplicado e dados inválidos. Para as rotas de autenticação, o Postman deve manter os cookies da resposta de login; cole manualmente apenas o access token e UUIDs quando a requisição solicitar esses valores.

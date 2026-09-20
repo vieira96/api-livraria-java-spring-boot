@@ -6,6 +6,7 @@ import com.vieira96.libraryapi.model.role.RoleModel;
 import com.vieira96.libraryapi.model.role.RoleName;
 import com.vieira96.libraryapi.model.user.UserModel;
 import com.vieira96.libraryapi.repository.auth.RefreshTokenRepository;
+import com.vieira96.libraryapi.repository.author.AuthorRepository;
 import com.vieira96.libraryapi.repository.role.RoleRepository;
 import com.vieira96.libraryapi.repository.user.UserRepository;
 import com.vieira96.libraryapi.service.auth.AuthService;
@@ -21,7 +22,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.LocalDate;
 import java.util.UUID;
+
+import com.vieira96.libraryapi.model.author.AuthorModel;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -43,8 +47,12 @@ class AuthorControllerTest extends IntegrationTestContainer {
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
 
+    @Autowired
+    private AuthorRepository authorRepository;
+
     private UUID createdUserId;
     private UUID adminUserId;
+    private UUID createdAuthorId;
 
     @BeforeEach
     void setUp() {
@@ -66,6 +74,9 @@ class AuthorControllerTest extends IntegrationTestContainer {
 
     @AfterEach
     void cleanUpCreatedUser() {
+        if (createdAuthorId != null) {
+            authorRepository.deleteById(createdAuthorId);
+        }
         if (adminUserId != null) {
             refreshTokenRepository.deleteAllByUser_Id(adminUserId);
             userRepository.deleteById(adminUserId);
@@ -110,9 +121,11 @@ class AuthorControllerTest extends IntegrationTestContainer {
 
     @Test
     void shouldAllowUserToGetAuthor() throws Exception {
-        HttpResponse<String> response = sendGet("/api/authors/" + UUID.randomUUID(), userToken);
+        AuthorModel author = createAuthor();
+        HttpResponse<String> response = sendGet("/api/authors/" + author.getId(), userToken);
 
-        assertThat(response.statusCode()).isIn(200, 404);
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).contains(author.getName());
     }
 
     @Test
@@ -144,6 +157,17 @@ class AuthorControllerTest extends IntegrationTestContainer {
         HttpResponse<String> response = sendDelete("/api/authors/" + UUID.randomUUID(), userToken);
 
         assertThat(response.statusCode()).isEqualTo(403);
+    }
+
+    private AuthorModel createAuthor() {
+        AuthorModel author = new AuthorModel();
+        author.setName("Author " + UUID.randomUUID());
+        author.setBirthdate(LocalDate.of(1839, 6, 21));
+        author.setNationality("Brasileira");
+
+        AuthorModel savedAuthor = authorRepository.save(author);
+        createdAuthorId = savedAuthor.getId();
+        return savedAuthor;
     }
 
     private HttpResponse<String> sendGet(String path, String token) throws Exception {

@@ -8,7 +8,7 @@ import org.springframework.data.domain.Sort;
 import java.util.Arrays;
 
 public record AuthorFiltersDTO(
-        @Min(0) Integer page,
+        @Min(1) Integer page,
         @Min(1) @Max(100) Integer size,
         String name,
         String search,
