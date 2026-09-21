@@ -57,8 +57,7 @@ class BookControllerTest extends IntegrationTestContainer {
     @Autowired
     private BookRepository bookRepository;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private UUID createdUserId;
     private UUID adminUserId;
@@ -190,7 +189,7 @@ class BookControllerTest extends IntegrationTestContainer {
     private BookModel createBook(AuthorModel author) {
         BookModel book = new BookModel();
         book.setTitle("Book " + UUID.randomUUID());
-        book.setIsbn("isbn-" + UUID.randomUUID());
+        book.setIsbn("isbn-" + UUID.randomUUID().toString().replace("-", "").substring(0, 15));
         book.setPublishDate(LocalDate.of(1890, 3, 15));
         book.setGender(BookGender.ROMANCE);
         book.setPrice(new BigDecimal("49.90"));

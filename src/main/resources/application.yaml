@@ -42,3 +42,16 @@ security:
     enabled: ${LOGIN_ATTEMPTS_ENABLED:true}
     max-attempts: ${LOGIN_MAX_ATTEMPTS:3}
     window: ${LOGIN_ATTEMPT_WINDOW:5m}
+
+logging:
+  file:
+    name: logs/libraryapi.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 30
+      total-size-cap: 500MB
+  level:
+    root: INFO
+    com.vieira96.libraryapi: DEBUG
+    org.springframework.security: WARN

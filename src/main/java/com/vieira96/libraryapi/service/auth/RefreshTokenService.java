@@ -7,6 +7,8 @@ import com.vieira96.libraryapi.repository.auth.RefreshTokenRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -18,6 +20,7 @@ import java.util.HexFormat;
 import java.util.UUID;
 
 @Service
+@Slf4j
 public class RefreshTokenService {
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
@@ -48,15 +51,19 @@ public class RefreshTokenService {
         Instant now = Instant.now();
 
         if (currentToken.getRevokedAt() != null) {
+            log.warn("REUSE DETECTED: Refresh token já revogado utilizado. Revogando família inteira. familyId={}, userId={}, tokenId={}",
+                    currentToken.getFamilyId(), currentToken.getUser().getId(), currentToken.getId());
             refreshTokenRepository.revokeActiveFamily(currentToken.getFamilyId(), now);
             throw new InvalidRefreshTokenException();
         }
 
         if (!currentToken.getExpiresAt().isAfter(now)) {
+            log.warn("Refresh token expirado utilizado. userId={}, tokenId={}", currentToken.getUser().getId(), currentToken.getId());
             currentToken.setRevokedAt(now);
             throw new InvalidRefreshTokenException();
         }
 
+        log.debug("Refresh token rotacionado com sucesso. userId={}, familyId={}", currentToken.getUser().getId(), currentToken.getFamilyId());
         currentToken.setRevokedAt(now);
         IssuedRefreshToken newToken = issue(currentToken.getUser(), currentToken.getFamilyId());
 

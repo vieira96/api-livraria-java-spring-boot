@@ -17,6 +17,7 @@ import com.vieira96.libraryapi.repository.user.UserRepository;
 import com.vieira96.libraryapi.validator.auth.AuthValidator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private static final String DUMMY_PASSWORD_HASH =
@@ -55,8 +57,11 @@ public class AuthService {
         user.getRoles().add(defaultRole);
 
         try {
-            return userRepository.saveAndFlush(user);
+            UserModel saved = userRepository.saveAndFlush(user);
+            log.info("Novo usuário registrado: id={}, email={}", saved.getId(), normalizedEmail);
+            return saved;
         } catch (DataIntegrityViolationException exception) {
+            log.warn("Tentativa de registro com email duplicado: {}", normalizedEmail);
             throw new UserAlreadyExistsException();
         }
     }
@@ -70,11 +75,13 @@ public class AuthService {
         boolean passwordMatches = passwordEncoder.matches(request.password(), passwordHash);
 
         if (foundUser.isEmpty() || !passwordMatches) {
+            log.warn("Tentativa de login com credenciais inválidas: email={}, ip={}", normalizedEmail, clientIp);
             throw new InvalidCredentialsException();
         }
 
         UserModel user = foundUser.get();
         loginAttemptService.releaseSuccessfulAttempt(clientIp);
+        log.info("Login realizado com sucesso: userId={}, email={}, ip={}", user.getId(), normalizedEmail, clientIp);
         String refreshToken = refreshTokenService.issue(user).value();
 
         return createSession(user, refreshToken);

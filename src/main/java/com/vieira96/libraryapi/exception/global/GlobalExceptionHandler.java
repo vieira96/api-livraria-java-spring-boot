@@ -64,6 +64,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ErrorResponseDTO> handleConflictException(ConflictException e) {
+        log.warn("Conflito: {}", e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
                 .body(ErrorResponseDTO.conflict(e.getMessage()));
@@ -75,6 +76,7 @@ public class GlobalExceptionHandler {
             InvalidAccessTokenException.class
     })
     public ResponseEntity<ErrorResponseDTO> handleAuthenticationException(RuntimeException e) {
+        log.warn("Erro de autenticação: {}", e.getMessage());
         ErrorResponseDTO response = new ErrorResponseDTO(
                 HttpStatus.UNAUTHORIZED.value(),
                 e.getMessage(),
@@ -88,9 +90,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<LoginRateLimitResponseDTO> handleTooManyLoginAttempts(
             TooManyLoginAttemptsException e
     ) {
+        long retryAfterMinutes = Math.max(1, (e.getRetryAfterSeconds() + 59) / 60);
         LoginRateLimitResponseDTO response = new LoginRateLimitResponseDTO(
                 HttpStatus.TOO_MANY_REQUESTS.value(),
-                "Muitas tentativas de login. Tente novamente em " + e.getRetryAfterSeconds() + " segundos.",
+                "Muitas tentativas de login. Tente novamente em " + retryAfterMinutes + " minuto" + (retryAfterMinutes > 1 ? "s" : "") + ".",
                 e.getRetryAfterSeconds()
         );
 
@@ -116,6 +119,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponseDTO> handleAccessDeniedException(AccessDeniedException e) {
+        log.warn("Acesso negado: {}", e.getMessage());
         ErrorResponseDTO response = new ErrorResponseDTO(
                 HttpStatus.FORBIDDEN.value(),
                 "Acesso negado.",

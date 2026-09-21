@@ -9,6 +9,8 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -18,6 +20,7 @@ import java.util.List;
 import java.util.Locale;
 
 @Service
+@Slf4j
 public class LoginAttemptService {
 
     private static final String KEY_PREFIX = "security:login-attempts:ip:";
@@ -88,6 +91,7 @@ public class LoginAttemptService {
         long ttlMillis = ((Number) result.get(1)).longValue();
         if (attempts > maxAttempts) {
             long retryAfterSeconds = Math.max(1, (ttlMillis + 999) / 1000);
+            log.warn("Rate-limit de login atingido. ip={}, tentativas={}, retryAfter={}s", clientIp, attempts, retryAfterSeconds);
             throw new TooManyLoginAttemptsException(retryAfterSeconds);
         }
     }

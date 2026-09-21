@@ -19,3 +19,4 @@ out/
 # Sistema operacional e logs locais
 .DS_Store
 *.log
+logs/
