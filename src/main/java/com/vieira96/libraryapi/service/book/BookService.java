@@ -2,6 +2,7 @@ package com.vieira96.libraryapi.service.book;
 
 import com.vieira96.libraryapi.dto.book.BookFiltersDTO;
 import com.vieira96.libraryapi.dto.book.CreateBookDTO;
+import com.vieira96.libraryapi.integration.notification.NotificationPublisher;
 import com.vieira96.libraryapi.model.author.AuthorModel;
 import com.vieira96.libraryapi.model.book.BookModel;
 import com.vieira96.libraryapi.repository.book.BookRepository;
@@ -24,6 +25,7 @@ public class BookService {
     private final BookRepository bookRepository;
     private final AuthorValidator authorValidator;
     private final BookValidator bookValidator;
+    private final NotificationPublisher notificationPublisher;
 
     private static final Set<String> SEARCHABLE_FIELDS = Set.of(
             "title",
@@ -41,7 +43,10 @@ public class BookService {
         bookModel.setPrice(request.price());
         bookModel.setAuthor(author);
 
-        return bookRepository.save(bookModel);
+        BookModel savedBook = bookRepository.save(bookModel);
+        notificationPublisher.publishBookCreated(savedBook.getId(), savedBook.getTitle());
+
+        return savedBook;
     }
 
     public Page<BookModel> getBooks(BookFiltersDTO filters) {

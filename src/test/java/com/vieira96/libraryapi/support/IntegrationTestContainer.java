@@ -3,6 +3,7 @@ package com.vieira96.libraryapi.support;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.RabbitMQContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -21,9 +22,13 @@ public abstract class IntegrationTestContainer {
     private static final GenericContainer<?> REDIS = new GenericContainer<>(DockerImageName.parse("redis:7.4-alpine"))
             .withExposedPorts(6379);
 
+    private static final RabbitMQContainer RABBITMQ =
+            new RabbitMQContainer(DockerImageName.parse("rabbitmq:4-management-alpine"));
+
     static {
         POSTGRES.start();
         REDIS.start();
+        RABBITMQ.start();
     }
 
     @DynamicPropertySource
@@ -35,5 +40,9 @@ public abstract class IntegrationTestContainer {
         registry.add("LOGIN_ATTEMPTS_ENABLED", () -> "false");
         registry.add("REDIS_HOST", REDIS::getHost);
         registry.add("REDIS_PORT", () -> REDIS.getMappedPort(6379));
+        registry.add("RABBITMQ_HOST", RABBITMQ::getHost);
+        registry.add("RABBITMQ_PORT", RABBITMQ::getAmqpPort);
+        registry.add("RABBITMQ_USER", RABBITMQ::getAdminUsername);
+        registry.add("RABBITMQ_PASSWORD", RABBITMQ::getAdminPassword);
     }
 }

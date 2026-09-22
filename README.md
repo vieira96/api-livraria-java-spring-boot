@@ -10,6 +10,8 @@ API REST para cadastro e consulta de autores e livros, com cadastro de usuários
 - Spring Security Crypto (BCrypt) e OAuth2 JOSE/Nimbus para JWT HS256
 - PostgreSQL 16
 - Redis 7 para limitação de tentativas de login com TTL
+- RabbitMQ 4 (via Spring AMQP) para publicar eventos ao microsserviço de notificações
+- Virtual Threads do Java 21 para o publish assíncrono
 - Flyway
 - Docker Compose
 - Testcontainers
@@ -25,6 +27,8 @@ bash run-project.sh
 ```
 
 O script cria o `.env` a partir do `.env.example` quando necessário, valida o Docker e inicia a API com PostgreSQL e Redis em modo Watch. Mantenha o terminal aberto enquanto estiver desenvolvendo; use `Ctrl+C` para encerrar.
+
+O broker RabbitMQ não sobe por este script: ele pertence ao compose do microsserviço de notificações (ver seção abaixo). Para a API publicar eventos, suba aquele stack antes e garanta a rede compartilhada com `docker network create library-messaging`.
 
 Se preferir rodar manualmente, crie o arquivo de ambiente a partir do exemplo:
 
@@ -299,3 +303,24 @@ Para executar somente o teste de integração do cadastro, o Docker deve estar a
 A collection está em [postman/Library API.postman_collection.json](postman/Library%20API.postman_collection.json). Ela usa diretamente `http://localhost:8000/api`; se alterar `SERVER_PORT`, edite as URLs das requisições.
 
 A pasta `Authentication` contém requisições para cadastro, login, renovação, consulta do usuário autenticado, credenciais incorretas, e-mail duplicado e dados inválidos. Para as rotas de autenticação, o Postman deve manter os cookies da resposta de login; cole manualmente apenas o access token e UUIDs quando a requisição solicitar esses valores.
+
+## Microsserviço de notificações
+
+Ao criar um livro (`POST /api/books`), a API publica o evento `book.created` com o id e o título no RabbitMQ. O consumo é feito pelo microsserviço de notificações, em NestJS:
+
+[https://github.com/vieira96/micro-service-notification-nest](https://github.com/vieira96/micro-service-notification-nest)
+
+O publish roda em background com virtual threads (`@Async`), em lotes de 100 destinatários por mensagem (`NOTIFICATIONS_CHUNK_SIZE`), então a criação do livro não espera a notificação. Se o broker estiver fora do ar, o evento é descartado com log e a criação continua funcionando.
+
+Variáveis no `.env` (valores de exemplo no `.env.example`):
+
+```text
+RABBITMQ_HOST=rabbitmq
+RABBITMQ_PORT=5672
+RABBITMQ_USER=notifications
+RABBITMQ_PASSWORD=notifications
+NOTIFICATIONS_QUEUE=notifications.book-created
+NOTIFICATIONS_CHUNK_SIZE=100
+```
+
+A API e o microsserviço se falam pela rede Docker `library-messaging` (criada com `docker network create library-messaging`). O painel do RabbitMQ fica em `http://localhost:15672`.

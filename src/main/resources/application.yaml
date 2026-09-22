@@ -13,6 +13,11 @@ spring:
       port: ${REDIS_PORT:6379}
       connect-timeout: ${REDIS_CONNECT_TIMEOUT:2s}
       timeout: ${REDIS_TIMEOUT:2s}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:notifications}
+    password: ${RABBITMQ_PASSWORD:notifications}
   flyway:
     locations: classpath:db/migration
   jpa:
@@ -42,6 +47,10 @@ security:
     enabled: ${LOGIN_ATTEMPTS_ENABLED:true}
     max-attempts: ${LOGIN_MAX_ATTEMPTS:3}
     window: ${LOGIN_ATTEMPT_WINDOW:5m}
+
+notifications:
+  queue: ${NOTIFICATIONS_QUEUE:notifications.book-created}
+  chunk-size: ${NOTIFICATIONS_CHUNK_SIZE:100}
 
 logging:
   file:

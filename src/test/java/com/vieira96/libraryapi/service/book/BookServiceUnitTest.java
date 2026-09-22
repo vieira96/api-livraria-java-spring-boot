@@ -4,6 +4,7 @@ import com.vieira96.libraryapi.dto.book.BookFiltersDTO;
 import com.vieira96.libraryapi.dto.book.CreateBookDTO;
 import com.vieira96.libraryapi.exception.book.BookWithISBNAlreadyExists;
 import com.vieira96.libraryapi.exception.global.NotFoundException;
+import com.vieira96.libraryapi.integration.notification.NotificationPublisher;
 import com.vieira96.libraryapi.model.author.AuthorModel;
 import com.vieira96.libraryapi.model.book.BookGender;
 import com.vieira96.libraryapi.model.book.BookModel;
@@ -45,6 +46,9 @@ class BookServiceUnitTest {
     @Mock
     private BookValidator bookValidator;
 
+    @Mock
+    private NotificationPublisher notificationPublisher;
+
     @InjectMocks
     private BookService bookService;
 
@@ -64,12 +68,18 @@ class BookServiceUnitTest {
         );
 
         when(authorValidator.authorExists(authorId)).thenReturn(author);
+        when(bookRepository.save(any(BookModel.class))).thenAnswer(invocation -> {
+            BookModel toSave = invocation.getArgument(0);
+            toSave.setId(UUID.randomUUID());
+            return toSave;
+        });
 
-        bookService.createBook(request);
+        BookModel result = bookService.createBook(request);
 
         ArgumentCaptor<BookModel> bookCaptor = ArgumentCaptor.forClass(BookModel.class);
         verify(bookValidator).verifyIfBookExistsByISBN("978-85-7326-109-7", null);
         verify(bookRepository).save(bookCaptor.capture());
+        verify(notificationPublisher).publishBookCreated(result.getId(), "O Cortiço");
 
         BookModel savedBook = bookCaptor.getValue();
         assertThat(savedBook.getTitle()).isEqualTo("O Cortiço");
@@ -103,7 +113,7 @@ class BookServiceUnitTest {
                 .isInstanceOf(BookWithISBNAlreadyExists.class)
                 .hasMessage("Já existe um livro com o código isbn: 978-85-7326-109-7");
 
-        verifyNoInteractions(bookRepository);
+        verifyNoInteractions(bookRepository, notificationPublisher);
     }
 
     @Test
@@ -126,7 +136,7 @@ class BookServiceUnitTest {
                 .isInstanceOf(NotFoundException.class)
                 .hasMessage("Author not found with id: " + authorId);
 
-        verifyNoInteractions(bookRepository, bookValidator);
+        verifyNoInteractions(bookRepository, bookValidator, notificationPublisher);
     }
 
     @Test
