@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "c6a75176-9dc6-4953-9811-0a852880d8ba",
     "name": "Library API",
-    "description": "Collection para testar autenticação e a API de autores e livros. Preencha manualmente e-mail, senha, tokens e UUIDs nos campos de cada requisição.",
+    "description": "Collection da Library API. Login e refresh salvam automaticamente o access token na variável {{accessToken}}. Os tokens são assinados com RS256; a chave pública pode ser inspecionada em /.well-known/jwks.json.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -27,162 +27,201 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Maria Silva\",\n  \"email\": \"maria@example.com\",\n  \"password\": \"senha-segura\"\n}"
             },
-            "url": "http://localhost:8000/api/auth/register",
+            "url": "{{libraryApiUrl}}/api/auth/register",
             "description": "Cadastra um usuário com a role USER. Altere manualmente o e-mail para cada novo cadastro."
           }
         },
         {
           "name": "Login",
-          "event": [{
-            "listen": "test",
-            "script": {
-              "type": "text/javascript",
-              "exec": [
-                "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                "const response = pm.response.json();",
-                "pm.test('Returns a Bearer JWT', () => { pm.expect(response.tokenType).to.eql('Bearer'); pm.expect(response.accessToken).to.be.a('string').and.not.empty; pm.expect(response.accessToken.split('.')).to.have.length(3); });",
-                "pm.test('Returns a refresh token', () => pm.expect(response.refreshToken).to.be.a('string').and.not.empty);",
-                "pm.test('Returns the token lifetime in seconds', () => { pm.expect(response.expiresIn).to.be.a('number'); pm.expect(response.expiresIn).to.be.above(0); });"
-              ]
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const response = pm.response.json();",
+                  "pm.test('Returns a Bearer JWT', () => { pm.expect(response.tokenType).to.eql('Bearer'); pm.expect(response.accessToken).to.be.a('string').and.not.empty; pm.expect(response.accessToken.split('.')).to.have.length(3); });",
+                  "pm.test('Returns the token lifetime in seconds', () => { pm.expect(response.expiresIn).to.be.a('number'); pm.expect(response.expiresIn).to.be.above(0); });",
+                  "pm.collectionVariables.set('accessToken', response.accessToken);"
+                ]
+              }
             }
-          }],
+          ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"maria@example.com\",\n  \"password\": \"senha-segura\"\n}"
             },
-            "url": "http://localhost:8000/api/auth/login",
+            "url": "{{libraryApiUrl}}/api/auth/login",
             "description": "Informe manualmente o e-mail e a senha cadastrados."
           }
         },
         {
           "name": "Refresh tokens",
-          "event": [{
-            "listen": "test",
-            "script": {
-              "type": "text/javascript",
-              "exec": [
-                "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                "const response = pm.response.json();",
-                "pm.test('Returns a refresh token', () => pm.expect(response.refreshToken).to.be.a('string').and.not.empty);",
-                "pm.test('Returns a new access JWT', () => pm.expect(response.accessToken.split('.')).to.have.length(3));"
-              ]
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const response = pm.response.json();",
+                  "pm.test('Returns a new access JWT', () => pm.expect(response.accessToken.split('.')).to.have.length(3));",
+                  "pm.collectionVariables.set('accessToken', response.accessToken);"
+                ]
+              }
             }
-          }],
+          ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"refreshToken\": \"COLE_O_REFRESH_TOKEN_AQUI\"\n}"
-            },
-            "url": "http://localhost:8000/api/auth/refresh",
-            "description": "Cole manualmente o refresh token recebido no login."
+            "header": [],
+            "url": "{{libraryApiUrl}}/api/auth/refresh",
+            "description": "O Postman preserva o cookie HttpOnly recebido no login. Execute Login antes desta requisição; não envie refresh token no body."
           }
         },
         {
           "name": "Get authenticated user",
-          "event": [{
-            "listen": "test",
-            "script": {
-              "type": "text/javascript",
-              "exec": [
-                "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                "const response = pm.response.json();",
-                "pm.test('Returns the logged-in user', () => { pm.expect(response.id).to.be.a('string').and.not.empty; pm.expect(response.email).to.be.a('string').and.not.empty; });",
-                "pm.test('Does not expose the password', () => pm.expect(response).not.to.have.property('password'));"
-              ]
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const response = pm.response.json();",
+                  "pm.test('Returns the logged-in user', () => { pm.expect(response.id).to.be.a('string').and.not.empty; pm.expect(response.email).to.be.a('string').and.not.empty; });",
+                  "pm.test('Does not expose the password', () => pm.expect(response).not.to.have.property('password'));"
+                ]
+              }
             }
-          }],
+          ],
           "request": {
             "method": "GET",
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
             },
-            "url": "http://localhost:8000/api/auth/me",
+            "url": "{{libraryApiUrl}}/api/auth/me",
             "description": "Retorna os dados do usuário associado ao access token, sem expor a senha."
           }
         },
         {
           "name": "Reject invalid login credentials",
-          "event": [{
-            "listen": "test",
-            "script": {
-              "type": "text/javascript",
-              "exec": [
-                "pm.test('Status 401 or 429', () => pm.expect(pm.response.code).to.be.oneOf([401, 429]));",
-                "const response = pm.response.json();",
-                "if (pm.response.code === 429) {",
-                "  pm.test('Returns remaining wait time', () => { pm.expect(response.retryAfterSeconds).to.be.above(0); pm.expect(pm.response.headers.get('Retry-After')).to.eql(String(response.retryAfterSeconds)); });",
-                "} else {",
-                "  pm.test('Returns a generic credentials message', () => pm.expect(response.message).to.eql('E-mail ou senha inválidos.'));",
-                "}",
-                "pm.test('Does not expose authentication details', () => { pm.expect(response).not.to.have.property('accessToken'); pm.expect(response).not.to.have.property('password'); });"
-              ]
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401 or 429', () => pm.expect(pm.response.code).to.be.oneOf([401, 429]));",
+                  "const response = pm.response.json();",
+                  "if (pm.response.code === 429) {",
+                  "  pm.test('Returns remaining wait time', () => { pm.expect(response.retryAfterSeconds).to.be.above(0); pm.expect(pm.response.headers.get('Retry-After')).to.eql(String(response.retryAfterSeconds)); });",
+                  "} else {",
+                  "  pm.test('Returns a generic credentials message', () => pm.expect(response.message).to.eql('E-mail ou senha inválidos.'));",
+                  "}",
+                  "pm.test('Does not expose authentication details', () => { pm.expect(response).not.to.have.property('accessToken'); pm.expect(response).not.to.have.property('password'); });"
+                ]
+              }
             }
-          }],
+          ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"maria@example.com\",\n  \"password\": \"senha-incorreta\"\n}"
             },
-            "url": "http://localhost:8000/api/auth/login",
+            "url": "{{libraryApiUrl}}/api/auth/login",
             "description": "Valida o retorno 401 nas três primeiras tentativas. Na quarta tentativa dentro da janela, a API retorna 429, Retry-After e retryAfterSeconds."
           }
         },
         {
           "name": "Reject duplicate email",
-          "event": [{
-            "listen": "test",
-            "script": {
-              "type": "text/javascript",
-              "exec": [
-                "pm.test('Status 409', () => pm.response.to.have.status(409));",
-                "pm.test('Returns conflict message', () => pm.expect(pm.response.json().message).to.eql('Já existe um usuário cadastrado com este e-mail.'));"
-              ]
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Returns conflict message', () => pm.expect(pm.response.json().message).to.eql('Já existe um usuário cadastrado com este e-mail.'));"
+                ]
+              }
             }
-          }],
+          ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Outra Maria\",\n  \"email\": \"maria@example.com\",\n  \"password\": \"outra-senha-segura\"\n}"
             },
-            "url": "http://localhost:8000/api/auth/register",
+            "url": "{{libraryApiUrl}}/api/auth/register",
             "description": "Execute depois de Register user para validar o conflito de e-mail duplicado."
           }
         },
         {
           "name": "Reject invalid registration",
-          "event": [{
-            "listen": "test",
-            "script": {
-              "type": "text/javascript",
-              "exec": [
-                "pm.test('Status 422', () => pm.response.to.have.status(422));",
-                "pm.test('Returns validation errors', () => pm.expect(pm.response.json().errors).to.be.an('array').that.is.not.empty);"
-              ]
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Returns validation errors', () => pm.expect(pm.response.json().errors).to.be.an('array').that.is.not.empty);"
+                ]
+              }
             }
-          }],
+          ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"M\",\n  \"email\": \"email-invalido\",\n  \"password\": \"123\"\n}"
             },
-            "url": "http://localhost:8000/api/auth/register"
+            "url": "{{libraryApiUrl}}/api/auth/register"
           }
         }
       ]
@@ -196,14 +235,25 @@
             "method": "POST",
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
             },
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Machado de Assis\",\n  \"birthdate\": \"1839-06-21\",\n  \"nationality\": \"Brasileira\"\n}"
             },
-            "url": "http://localhost:8000/api/authors"
+            "url": "{{libraryApiUrl}}/api/authors"
           }
         },
         {
@@ -212,21 +262,54 @@
             "method": "GET",
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
             },
             "url": {
-              "raw": "http://localhost:8000/api/authors?page=1&size=10",
+              "raw": "{{libraryApiUrl}}/api/authors?page=1&size=10",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": [
+                "localhost"
+              ],
               "port": "8000",
-              "path": ["api", "authors"],
+              "path": [
+                "api",
+                "authors"
+              ],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "size", "value": "10" },
-                { "key": "search", "value": "Machado", "disabled": true },
-                { "key": "sortBy", "value": "NAME", "disabled": true },
-                { "key": "direction", "value": "ASC", "disabled": true },
-                { "key": "include", "value": "bookCount", "disabled": true }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": "Machado",
+                  "disabled": true
+                },
+                {
+                  "key": "sortBy",
+                  "value": "NAME",
+                  "disabled": true
+                },
+                {
+                  "key": "direction",
+                  "value": "ASC",
+                  "disabled": true
+                },
+                {
+                  "key": "include",
+                  "value": "bookCount",
+                  "disabled": true
+                }
               ]
             }
           }
@@ -237,16 +320,32 @@
             "method": "GET",
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
             },
             "url": {
-              "raw": "http://localhost:8000/api/authors/COLE_O_UUID_DO_AUTOR_AQUI",
+              "raw": "{{libraryApiUrl}}/api/authors/COLE_O_UUID_DO_AUTOR_AQUI",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": [
+                "localhost"
+              ],
               "port": "8000",
-              "path": ["api", "authors", "COLE_O_UUID_DO_AUTOR_AQUI"],
+              "path": [
+                "api",
+                "authors",
+                "COLE_O_UUID_DO_AUTOR_AQUI"
+              ],
               "query": [
-                { "key": "include", "value": "bookCount", "disabled": true }
+                {
+                  "key": "include",
+                  "value": "bookCount",
+                  "disabled": true
+                }
               ]
             }
           }
@@ -257,14 +356,25 @@
             "method": "PUT",
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
             },
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Machado de Assis\",\n  \"birthdate\": \"1839-06-21\",\n  \"nationality\": \"Brasil\"\n}"
             },
-            "url": "http://localhost:8000/api/authors/COLE_O_UUID_DO_AUTOR_AQUI"
+            "url": "{{libraryApiUrl}}/api/authors/COLE_O_UUID_DO_AUTOR_AQUI"
           }
         },
         {
@@ -273,9 +383,15 @@
             "method": "DELETE",
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
             },
-            "url": "http://localhost:8000/api/authors/COLE_O_UUID_DO_AUTOR_AQUI"
+            "url": "{{libraryApiUrl}}/api/authors/COLE_O_UUID_DO_AUTOR_AQUI"
           }
         }
       ]
@@ -289,14 +405,25 @@
             "method": "POST",
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
             },
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"Dom Casmurro\",\n  \"isbn\": \"978-85-359-0277-8\",\n  \"publishDate\": \"1899-01-01\",\n  \"gender\": \"FICCAO\",\n  \"price\": 49.90,\n  \"authorId\": \"COLE_O_UUID_DO_AUTOR_AQUI\"\n}"
             },
-            "url": "http://localhost:8000/api/books"
+            "url": "{{libraryApiUrl}}/api/books"
           }
         },
         {
@@ -305,24 +432,68 @@
             "method": "GET",
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
             },
             "url": {
-              "raw": "http://localhost:8000/api/books?page=1&size=10&authorId=COLE_O_UUID_DO_AUTOR_AQUI&search=Dom&sortBy=TITLE&direction=ASC",
+              "raw": "{{libraryApiUrl}}/api/books?page=1&size=10&authorId=COLE_O_UUID_DO_AUTOR_AQUI&search=Dom&sortBy=TITLE&direction=ASC",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": [
+                "localhost"
+              ],
               "port": "8000",
-              "path": ["api", "books"],
+              "path": [
+                "api",
+                "books"
+              ],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "size", "value": "10" },
-                { "key": "authorId", "value": "COLE_O_UUID_DO_AUTOR_AQUI" },
-                { "key": "search", "value": "Dom", "disabled": true },
-                { "key": "title", "value": "Dom", "disabled": true },
-                { "key": "isbn", "value": "978", "disabled": true },
-                { "key": "gender", "value": "FICCAO", "disabled": true },
-                { "key": "sortBy", "value": "TITLE", "disabled": true },
-                { "key": "direction", "value": "ASC", "disabled": true }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                },
+                {
+                  "key": "authorId",
+                  "value": "COLE_O_UUID_DO_AUTOR_AQUI"
+                },
+                {
+                  "key": "search",
+                  "value": "Dom",
+                  "disabled": true
+                },
+                {
+                  "key": "title",
+                  "value": "Dom",
+                  "disabled": true
+                },
+                {
+                  "key": "isbn",
+                  "value": "978",
+                  "disabled": true
+                },
+                {
+                  "key": "gender",
+                  "value": "FICCAO",
+                  "disabled": true
+                },
+                {
+                  "key": "sortBy",
+                  "value": "TITLE",
+                  "disabled": true
+                },
+                {
+                  "key": "direction",
+                  "value": "ASC",
+                  "disabled": true
+                }
               ]
             }
           }
@@ -333,9 +504,15 @@
             "method": "GET",
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
             },
-            "url": "http://localhost:8000/api/books/COLE_O_UUID_DO_LIVRO_AQUI"
+            "url": "{{libraryApiUrl}}/api/books/COLE_O_UUID_DO_LIVRO_AQUI"
           }
         },
         {
@@ -344,14 +521,25 @@
             "method": "PUT",
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
             },
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"Dom Casmurro — edição revisada\",\n  \"isbn\": \"978-85-359-0277-8\",\n  \"publishDate\": \"1899-01-01\",\n  \"gender\": \"FICCAO\",\n  \"price\": 59.90,\n  \"authorId\": \"COLE_O_UUID_DO_AUTOR_AQUI\"\n}"
             },
-            "url": "http://localhost:8000/api/books/COLE_O_UUID_DO_LIVRO_AQUI"
+            "url": "{{libraryApiUrl}}/api/books/COLE_O_UUID_DO_LIVRO_AQUI"
           }
         },
         {
@@ -360,12 +548,55 @@
             "method": "DELETE",
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "COLE_O_ACCESS_TOKEN_AQUI", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
             },
-            "url": "http://localhost:8000/api/books/COLE_O_UUID_DO_LIVRO_AQUI"
+            "url": "{{libraryApiUrl}}/api/books/COLE_O_UUID_DO_LIVRO_AQUI"
           }
         }
       ]
+    },
+    {
+      "name": "JWT",
+      "item": [
+        {
+          "name": "Get public JWKS",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns public RSA keys', () => pm.expect(pm.response.json().keys).to.be.an('array').and.not.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{libraryApiUrl}}/.well-known/jwks.json",
+            "description": "Endpoint público consumido pelos microserviços para validar os JWTs RS256. Não expõe a chave privada."
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "libraryApiUrl",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
     }
   ]
 }

@@ -38,8 +38,11 @@ scalar:
 
 security:
   jwt:
-    secret: ${JWT_SECRET}
+    private-key-path: ${JWT_PRIVATE_KEY_PATH:keys/jwt-private.pem}
+    public-key-path: ${JWT_PUBLIC_KEY_PATH:keys/jwt-public.pem}
+    key-id: ${JWT_KEY_ID:library-api-rs256-1}
     issuer: ${JWT_ISSUER:library-api}
+    audience: ${JWT_AUDIENCE:library-services}
     access-expiration: ${JWT_ACCESS_EXPIRATION:15m}
   refresh-token:
     expiration: ${REFRESH_TOKEN_EXPIRATION:7d}

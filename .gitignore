@@ -20,3 +20,6 @@ out/
 .DS_Store
 *.log
 logs/
+
+# Chaves RSA locais de desenvolvimento
+keys/*.pem

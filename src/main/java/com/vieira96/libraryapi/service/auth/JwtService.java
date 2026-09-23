@@ -3,18 +3,16 @@ package com.vieira96.libraryapi.service.auth;
 import com.vieira96.libraryapi.model.role.RoleModel;
 import com.vieira96.libraryapi.model.user.UserModel;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
-import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.stereotype.Service;
 
-import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -23,25 +21,25 @@ public class JwtService {
     private final JwtEncoder jwtEncoder;
     private final Duration expiration;
     private final String issuer;
+    private final String audience;
+    private final String keyId;
 
     public JwtService(
-            @Value("${security.jwt.secret}") String secret,
+            JwtEncoder jwtEncoder,
             @Value("${security.jwt.access-expiration}") Duration expiration,
-            @Value("${security.jwt.issuer}") String issuer
+            @Value("${security.jwt.issuer}") String issuer,
+            @Value("${security.jwt.audience}") String audience,
+            @Value("${security.jwt.key-id}") String keyId
     ) {
-        if (secret.getBytes(StandardCharsets.UTF_8).length < 32) {
-            throw new IllegalArgumentException("JWT_SECRET deve possuir pelo menos 32 bytes.");
-        }
         if (expiration.isZero() || expiration.isNegative()) {
             throw new IllegalArgumentException("JWT_EXPIRATION deve ser maior que zero.");
         }
 
-        SecretKeySpec secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-        this.jwtEncoder = NimbusJwtEncoder.withSecretKey(secretKey)
-                .algorithm(MacAlgorithm.HS256)
-                .build();
+        this.jwtEncoder = jwtEncoder;
         this.expiration = expiration;
         this.issuer = issuer;
+        this.audience = audience;
+        this.keyId = keyId;
     }
 
     public String generateToken(UserModel user) {
@@ -55,13 +53,15 @@ public class JwtService {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(issuer)
                 .subject(user.getId().toString())
+                .audience(List.of(audience))
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
                 .id(UUID.randomUUID().toString())
                 .claim("roles", roles)
                 .build();
-        JwsHeader header = JwsHeader.with(MacAlgorithm.HS256)
+        JwsHeader header = JwsHeader.with(SignatureAlgorithm.RS256)
                 .type("JWT")
+                .keyId(keyId)
                 .build();
 
         return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();

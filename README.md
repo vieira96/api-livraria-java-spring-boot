@@ -7,7 +7,7 @@ API REST para cadastro e consulta de autores e livros, com cadastro de usuários
 - Java 21
 - Spring Boot
 - Spring Data JPA
-- Spring Security Crypto (BCrypt) e OAuth2 JOSE/Nimbus para JWT HS256
+- Spring Security Crypto (BCrypt) e OAuth2 JOSE/Nimbus para JWT RS256 com chaves RSA e JWKS
 - PostgreSQL 16
 - Redis 7 para limitação de tentativas de login com TTL
 - RabbitMQ 4 (via Spring AMQP) para publicar eventos ao microsserviço de notificações
@@ -217,7 +217,7 @@ O IP é obtido da conexão HTTP (`remoteAddr`); a API não confia diretamente em
 
 Se o Redis estiver indisponível, o login responde com `503 Service Unavailable`; a proteção não é ignorada silenciosamente. As demais funcionalidades da API continuam operando normalmente.
 
-Configure `JWT_SECRET` com pelo menos 32 bytes. As durações podem ser alteradas por `JWT_ACCESS_EXPIRATION` e `REFRESH_TOKEN_EXPIRATION` no arquivo `.env`.
+Após clonar o projeto, execute `./scripts/generate-jwt-keys.sh` para gerar seu par RSA local em `keys/` (a chave privada não deve ir para o Git). Depois configure `JWT_PRIVATE_KEY_PATH`, `JWT_PUBLIC_KEY_PATH`, `JWT_ISSUER` e `JWT_AUDIENCE`. As durações podem ser alteradas por `JWT_ACCESS_EXPIRATION` e `REFRESH_TOKEN_EXPIRATION` no arquivo `.env`. A chave pública fica disponível em `/.well-known/jwks.json` para os serviços consumidores.
 
 Exemplo para criar um autor:
 
@@ -300,9 +300,9 @@ Para executar somente o teste de integração do cadastro, o Docker deve estar a
 
 ## Postman
 
-A collection está em [postman/Library API.postman_collection.json](postman/Library%20API.postman_collection.json). Ela usa diretamente `http://localhost:8000/api`; se alterar `SERVER_PORT`, edite as URLs das requisições.
+A collection está em [postman/Library API.postman_collection.json](postman/Library%20API.postman_collection.json). Ela possui a variável `{{libraryApiUrl}}`, inicia em `http://localhost:8000` e salva automaticamente o `{{accessToken}}` após Login ou Refresh. A pasta `JWT` permite conferir o JWKS público usado pelos microserviços.
 
-A pasta `Authentication` contém requisições para cadastro, login, renovação, consulta do usuário autenticado, credenciais incorretas, e-mail duplicado e dados inválidos. Para as rotas de autenticação, o Postman deve manter os cookies da resposta de login; cole manualmente apenas o access token e UUIDs quando a requisição solicitar esses valores.
+O Postman preserva o cookie HttpOnly da resposta de login; execute Login antes de Refresh. UUIDs de autores e livros continuam sendo informados nas variáveis ou URLs das requisições.
 
 ## Microsserviço de notificações
 

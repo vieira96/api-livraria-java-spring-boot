@@ -4,8 +4,14 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.RabbitMQContainer;
-import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.util.Base64;
 
 /**
  * Lifecycle dos containers é gerenciado pelo Ryuk (sidecar do Testcontainers).
@@ -13,6 +19,8 @@ import org.testcontainers.utility.DockerImageName;
  */
 @SuppressWarnings("resource")
 public abstract class IntegrationTestContainer {
+
+    private static final TestJwtKeys JWT_KEYS = TestJwtKeys.create();
 
     private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(DockerImageName.parse("postgres:16.3"))
             .withDatabaseName("libraryapi_test")
@@ -36,7 +44,9 @@ public abstract class IntegrationTestContainer {
         registry.add("DB_URL", POSTGRES::getJdbcUrl);
         registry.add("DB_USERNAME", POSTGRES::getUsername);
         registry.add("DB_PASSWORD", POSTGRES::getPassword);
-        registry.add("JWT_SECRET", () -> "integration-test-jwt-secret-with-32-bytes");
+        registry.add("JWT_PRIVATE_KEY_PATH", () -> JWT_KEYS.privateKeyPath().toString());
+        registry.add("JWT_PUBLIC_KEY_PATH", () -> JWT_KEYS.publicKeyPath().toString());
+        registry.add("JWT_AUDIENCE", () -> "library-services");
         registry.add("LOGIN_ATTEMPTS_ENABLED", () -> "false");
         registry.add("REDIS_HOST", REDIS::getHost);
         registry.add("REDIS_PORT", () -> REDIS.getMappedPort(6379));
@@ -44,5 +54,32 @@ public abstract class IntegrationTestContainer {
         registry.add("RABBITMQ_PORT", RABBITMQ::getAmqpPort);
         registry.add("RABBITMQ_USER", RABBITMQ::getAdminUsername);
         registry.add("RABBITMQ_PASSWORD", RABBITMQ::getAdminPassword);
+    }
+
+    private record TestJwtKeys(Path privateKeyPath, Path publicKeyPath) {
+        static TestJwtKeys create() {
+            try {
+                KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+                generator.initialize(2048);
+                KeyPair keyPair = generator.generateKeyPair();
+                Path directory = Files.createTempDirectory("libraryapi-test-jwt-");
+                Path privateKey = directory.resolve("private.pem");
+                Path publicKey = directory.resolve("public.pem");
+                Files.writeString(privateKey, pem("PRIVATE KEY", keyPair.getPrivate().getEncoded()));
+                Files.writeString(publicKey, pem("PUBLIC KEY", keyPair.getPublic().getEncoded()));
+                privateKey.toFile().deleteOnExit();
+                publicKey.toFile().deleteOnExit();
+                directory.toFile().deleteOnExit();
+                return new TestJwtKeys(privateKey, publicKey);
+            } catch (Exception exception) {
+                throw new IllegalStateException("Não foi possível criar chaves JWT temporárias para os testes.", exception);
+            }
+        }
+
+        private static String pem(String type, byte[] encoded) {
+            return "-----BEGIN " + type + "-----\n"
+                    + Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(encoded)
+                    + "\n-----END " + type + "-----\n";
+        }
     }
 }

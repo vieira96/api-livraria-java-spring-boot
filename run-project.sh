@@ -13,6 +13,24 @@ if ! docker compose version >/dev/null 2>&1; then
     exit 1
 fi
 
+if ! docker network inspect library-messaging >/dev/null 2>&1; then
+    echo "Criando a rede Docker compartilhada library-messaging..."
+    docker network create library-messaging >/dev/null
+fi
+
+private_key="keys/jwt-private.pem"
+public_key="keys/jwt-public.pem"
+
+if [[ -f "$private_key" && -f "$public_key" ]]; then
+    echo "Chaves JWT encontradas."
+elif [[ -e "$private_key" || -e "$public_key" ]]; then
+    echo "As chaves JWT estão incompletas em keys/. Corrija ou remova os arquivos antes de iniciar."
+    exit 1
+else
+    echo "Chaves JWT não encontradas. Gerando um novo par RSA..."
+    ./scripts/generate-jwt-keys.sh
+fi
+
 if [[ ! -f .env ]]; then
     cp .env.example .env
     echo "Arquivo .env criado a partir de .env.example."

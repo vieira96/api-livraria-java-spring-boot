@@ -37,8 +37,12 @@ services:
       - ${ENV_FILE:-../.env}
     ports:
       - "${SERVER_PORT:-8000}:${SERVER_PORT:-8000}"
+    environment:
+      JWT_PRIVATE_KEY_PATH: ${JWT_PRIVATE_KEY_PATH:-/run/secrets/jwt/jwt-private.pem}
+      JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-/run/secrets/jwt/jwt-public.pem}
     volumes:
       - ../logs:/app/logs
+      - ../keys:/run/secrets/jwt:ro
     networks:
       - default
       - messaging
