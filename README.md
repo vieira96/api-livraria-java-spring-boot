@@ -310,7 +310,7 @@ Ao criar um livro (`POST /api/books`), a API publica o evento `book.created` com
 
 [https://github.com/vieira96/micro-service-notification-nest](https://github.com/vieira96/micro-service-notification-nest)
 
-O publish roda em background com virtual threads (`@Async`), em lotes de 100 destinatários por mensagem (`NOTIFICATIONS_CHUNK_SIZE`), então a criação do livro não espera a notificação. Se o broker estiver fora do ar, o evento é descartado com log e a criação continua funcionando.
+O publish roda em background com virtual threads (`@Async`), então a criação do livro não espera a notificação. Se o broker estiver fora do ar, o evento é descartado com log e a criação continua funcionando.
 
 Variáveis no `.env` (valores de exemplo no `.env.example`):
 
@@ -320,7 +320,6 @@ RABBITMQ_PORT=5672
 RABBITMQ_USER=notifications
 RABBITMQ_PASSWORD=notifications
 NOTIFICATIONS_QUEUE=notifications.book-created
-NOTIFICATIONS_CHUNK_SIZE=100
 ```
 
 A API e o microsserviço se falam pela rede Docker `library-messaging` (criada com `docker network create library-messaging`). O painel do RabbitMQ fica em `http://localhost:15672`.
